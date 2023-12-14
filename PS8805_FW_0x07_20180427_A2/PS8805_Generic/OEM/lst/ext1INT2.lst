@@ -1,0 +1,2236 @@
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 1   
+
+
+C51 COMPILER V8.02, COMPILATION OF MODULE EXT1INT2
+OBJECT MODULE PLACED IN .\OEM\Obj\ext1INT2.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE Interrupt\sources\ext1INT2.c OMF2 BROWSE VARBANKING DEBUG PRINT(.\OEM\lst\e
+                    -xt1INT2.lst) OBJECT(.\OEM\Obj\ext1INT2.obj)
+
+line level    source
+
+   1          #include <myDP8051XP.H>
+   2          #include "global.h"
+   3          #include "PD.h"
+   4          #include "registers_map.h"
+   5          
+   6          /*********************************************************************************************/
+   7          /*  Name:                       ext1_INT
+   8          /*      Description:    Interrupt Service Routine for INT2
+   9          /*                              when an interrupt request comes, send a command to low priority command
+  10          /*                                      queue.
+  11          /*                                      clear the interrupt request
+  12          /*                                      if command queue is full, discard the event.
+  13          /********************************************************************************************/
+  14          
+  15          void ext1_INT(void) interrupt 2
+  16          {
+  17   1      //      unsigned char xdata Rd = 0;
+  18   1      //      unsigned char xdata Ra = 0;
+  19   1      
+  20   1      /*      if( ALERT_STATUS_1 & 0x02 & (ALERT_MASK_LOW) )  // Power status changed
+  21   1              {
+  22   1                      if ( ( GPIO_RD_BACK & 0x40 ) == 0 )
+  23   1                      {
+  24   1                              g_vucxReg5[0xF2]++;
+  25   1              
+  26   1                              if ( POWER_STATUS & 0x18 & POWER_STATUS_MASK )
+  27   1                              {
+  28   1                                      DISABLE_SOURCE_VBUS;//turn off VBUS
+  29   1                                      ALERT_STATUS_2 |= 0x02;//ALERT.Fault
+  30   1      #ifdef VBUS_OCP
+  31   1                                      FAULT_STATUS |= 0x08;//Internal or External OCP VBUS Over Current Protection Fault
+  32   1      #else
+  33   1      //                              FAULT_STATUS |= 0x04;//Internal or External OVP VBUS Over Voltage Protection Fault
+  34   1      #endif
+  35   1                              }
+  36   1                              ALERT_STATUS_1 = ALERT_STATUS_1 & (0x02);
+  37   1                      }
+  38   1              }*/
+  39   1      /*      if( ALERT_STATUS_1 & 0x01 & (ALERT_MASK_LOW) )  // CC status changed
+  40   1              {
+  41   1                      if ( PDC_STAT_31_24 & 0x01 )//DRP
+  42   1                      {
+  43   1                              g_vucxReg5[0xF1]++;
+  44   1      
+  45   1                              ALERT_MASK_LOW &= 0xFE;
+  46   1                              ALERT_STATUS_1 = ALERT_STATUS_1 & (0x01);
+  47   1                      }
+  48   1              }*/
+  49   1                                              
+  50   1              {
+  51   2              
+  52   2                      //CC1,CC2:10mV;VBUS:100mV;VCONN:25mV                    
+  53   2      #ifdef TCPM_DEBOUNCE
+  54   2      //              if( CC_DET_IRQ_STATUS0 & 0x18 & (~REG_CC_DET_INT_MASK0) )       // CC1_CONN_FILT_STATUS,CC2_CONN_FILT_STATUS
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 2   
+
+  55   2                      if( CC_DET_IRQ_INT0 & 0x18 )    // CC1_CONN_FILT_STATUS,CC2_CONN_FILT_STATUS
+  56   2      #else
+              //              if( CC_DET_IRQ_STATUS0 & 0x03 & (~REG_CC_DET_INT_MASK0) )       // CC1_CONN_DEB_STATUS,CC2_CONN_DEB_STATUS
+                              if( CC_DET_IRQ_INT0 & 0x03 )    // CC1_CONN_DEB_STATUS,CC2_CONN_DEB_STATUS
+              #endif
+  60   2                      {
+  61   3      //                      REG_CC_DET_INT_MASK = 0xFC;
+  62   3      
+  63   3      /*                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+  64   3                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+  65   3                              REG_DET_CTRL1 |= 0x10;
+  66   3                              REG_DET_CTRL1 &= 0xEF;*/
+  67   3      #ifdef TCPM_DEBOUNCE
+  68   3      //g_vucxReg5[0x30] = PDC_STAT_23_16;
+  69   3      //g_vucxReg5[0x31] = ROLE_CONTROL;
+  70   3      //g_vucxReg5[0x32] = CC_STATUS;
+  71   3      //g_vucxReg5[0x01] = 1;
+  72   3      //                      g_vucxReg5[0xA1]++;
+  73   3                              REG_IRQ_SRC_CTL |= 0x01;
+  74   3      #if 0
+                                      if( CC_DET_IRQ_STATUS0 & 0x08 ) // CC1_CONN_FILT_STATUS
+                                      {                                                                                                                                                                                                                 
+                      REG_GPIOP_OUT |= GPIO7;
+                                              g_vucxReg5[0xA1]++;
+              #if 0
+              /*                              if ( ( ( ucxCCState != CC1_RA_CC2_OPEN ) && ( ucxCCState != CC1_OPEN_CC2_RA ) ) || ( ( PDC_STAT_23_1
+             -6 & 0x60 ) == 0x60 ) )
+                                              {
+                                                      g_vucxReg5[0xB1]++;
+                                                      ALERT_MASK_LOW |= 0x01;
+                                              }*/
+                                              if ( ( ( ucxCCState == CC1_RA_CC2_OPEN ) || ( ucxCCState == CC1_OPEN_CC2_RA ) ) && ( ( PDC_STAT_23_16 
+             -& 0x60 ) != 0x60 ) )
+                                              {
+                                                      g_vucxReg5[0xB1]++;
+                                              }
+                                              else
+                                              {
+                                                      g_vucxReg5[0xC1]++;
+                                                      ALERT_MASK_LOW |= 0x01;
+                                              }
+              #endif
+                                      }
+                                      if( CC_DET_IRQ_STATUS0 & 0x10 ) // CC2_CONN_FILT_STATUS
+                                      {
+                                              g_vucxReg5[0xA2]++;
+              #if 0
+              /*                              if ( ( ( ucxCCState != CC1_RA_CC2_OPEN ) && ( ucxCCState != CC1_OPEN_CC2_RA ) ) || ( ( PDC_STAT_23_1
+             -6 & 0x60 ) == 0x60 ) )
+                                              {
+                                                      g_vucxReg5[0xB2]++;
+                                                      ALERT_MASK_LOW |= 0x01;
+                                              }*/
+                                              if ( ( ( ucxCCState == CC1_RA_CC2_OPEN ) || ( ucxCCState == CC1_OPEN_CC2_RA ) ) && ( ( PDC_STAT_23_16 
+             -& 0x60 ) != 0x60 ) )
+                                              {
+                                                      g_vucxReg5[0xB2]++;
+                                              }
+                                              else
+                                              {
+                                                      g_vucxReg5[0xC2]++;
+                                                      ALERT_MASK_LOW |= 0x01;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 3   
+
+                                              }
+              #endif
+                                      }
+              #endif
+ 117   3      #else//TCPM_DEBOUNCE
+                                      if( CC_DET_IRQ_STATUS0 & 0x01 ) // CC1_CONN_DEB_STATUS
+                                      {
+                                              g_vucxReg5[0xA1]++;
+              //                              ALERT_MASK_LOW |= 0x01;
+                                              if ( ( ( ROLE_CONTROL & 0x4F ) == 0x0A ) || ( ( ( ROLE_CONTROL & 0x40 ) == 0x40 ) && ( ( CC_STATUS & 0
+             -x10 ) == 0x10 ) ) )
+                                              {
+                                                      g_vucxReg5[0xB1]++;
+              
+                                                      ALERT_MASK_LOW |= 0x01;
+              //                                      ALERT_STATUS_1 = ALERT_STATUS_1 & (0x01);
+              //                                      ALERT_STATUS_1 |= 0x01;
+                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x01; 
+                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                      REG_DET_CTRL1 |= 0x10;
+                                                      REG_DET_CTRL1 &= 0xEF;
+                                                      ucxCCState = CC1_RP_CC2_OPEN;
+                                              }
+                                              if ( ( ( ROLE_CONTROL & 0x4F ) == 0x05 ) || ( ( ( ROLE_CONTROL & 0x40 ) == 0x40 ) && ( ( CC_STATUS & 0
+             -x10 ) == 0x00 ) ) )
+                                              {
+                                                      g_vucxReg5[0xC1]++;
+              
+                                                      if ( ( ucxCCState != CC1_RA_CC2_OPEN ) && ( ucxCCState != CC1_OPEN_CC2_RA ) )
+                                                      {
+                                                              g_vucxReg5[0xD1]++;
+              
+                                                              ALERT_MASK_LOW |= 0x01;
+              //                                              ALERT_STATUS_1 = ALERT_STATUS_1 & (0x01);
+              //                                              ALERT_STATUS_1 |= 0x01;
+              /*                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                              REG_DET_CTRL1 |= 0x10;
+                                                              REG_DET_CTRL1 &= 0xEF;
+                                                              ucxCCState = CC1_RD_CC2_OPEN;*/
+                                                      }
+                                                      else
+                                                      {
+              //                                              return;
+                                                      }
+                                              }
+                                      }
+                                      if( CC_DET_IRQ_STATUS0 & 0x02 ) // CC2_CONN_DEB_STATUS
+                                      {
+                                              g_vucxReg5[0xA2]++;
+              //                              ALERT_MASK_LOW |= 0x01;
+                                              if ( ( ( ROLE_CONTROL & 0x4F ) == 0x0A ) || ( ( ( ROLE_CONTROL & 0x40 ) == 0x40 ) && ( ( CC_STATUS & 0
+             -x10 ) == 0x10 ) ) )
+                                              {
+                                                      g_vucxReg5[0xB2]++;
+              
+                                                      ALERT_MASK_LOW |= 0x01;
+              //                                      ALERT_STATUS_1 = ALERT_STATUS_1 & (0x01);
+              //                                      ALERT_STATUS_1 |= 0x01;
+                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x04; 
+                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                      REG_DET_CTRL1 |= 0x10;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 4   
+
+                                                      REG_DET_CTRL1 &= 0xEF;
+                                                      ucxCCState = CC1_OPEN_CC2_RP;
+                                              }
+                                              if ( ( ( ROLE_CONTROL & 0x4F ) == 0x05 ) || ( ( ( ROLE_CONTROL & 0x40 ) == 0x40 ) && ( ( CC_STATUS & 0
+             -x10 ) == 0x00 ) ) )
+                                              {
+                                                      g_vucxReg5[0xC2]++;
+              
+                                                      if ( ( ucxCCState != CC1_RA_CC2_OPEN ) && ( ucxCCState != CC1_OPEN_CC2_RA ) )
+                                                      {
+                                                              g_vucxReg5[0xD2]++;
+              
+                                                              ALERT_MASK_LOW |= 0x01;
+              //                                              ALERT_STATUS_1 = ALERT_STATUS_1 & (0x01);
+              //                                              ALERT_STATUS_1 |= 0x01;
+              /*                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                              REG_DET_CTRL1 |= 0x10;
+                                                              REG_DET_CTRL1 &= 0xEF;
+                                                              ucxCCState = CC1_OPEN_CC2_RD;*/
+                                                      }
+                                                      else
+                                                      {
+              //                                              return;
+                                                      }
+                                              }
+                                      }
+              #endif//TCPM_DEBOUNCE
+ 199   3                              g_vucxReg5[0x90] |= 0x01;
+ 200   3                              g_vucxReg5[0x91] = 0;
+ 201   3                              g_vucxReg5[0x92] = 0;
+ 202   3                              g_vucxReg5[0x93] = 0;
+ 203   3                              g_vucxReg5[0x94] = 0;
+ 204   3                              g_vucxReg5[0x95] = 0;
+ 205   3                              g_vucxReg5[0x96] = 0;
+ 206   3                              g_vucxReg5[0x8F] = 0;
+ 207   3                              g_vucxReg5[0x20] = 0;
+ 208   3                              g_vucxReg5[0x21] = 0;
+ 209   3      
+ 210   3      #ifdef COMPARATOR
+                                      if ( ( ROLE_CONTROL & 0x40 ) == 0x40 )//DRP
+                                      {
+                                              g_vucxReg5[0x91] |= 0x01;
+                                              
+                                              if ( ( CC_STATUS & 0x30 ) == 0x00 )//TCPC is presenting Rp
+                                              {
+                                                      g_vucxReg5[0x92] |= 0x01;
+              
+                                                      //source
+                                                      if ( ( PDC_STAT_23_16 & 0x60 ) == 0x20 )//CC2_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x01;
+              
+                                                              if ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 )
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x01;
+                                                                      g_vucxReg5[0x8F] = 0x51;
+              
+              /*                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x04; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 5   
+
+              */
+                                                                      ucxCCState = CC1_OPEN_CC2_RA;
+                                                              }
+                                                              else
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x02;
+                                                                      g_vucxReg5[0x8F] = 0x01;
+                                                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_OPEN_CC2_RD;
+                                                              }
+                                                      }
+                                                      else if ( ( PDC_STAT_23_16 & 0x60 ) == 0x40 )//CC1_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x02;
+              
+                                                              if ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 )
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x01;
+                                                                      g_vucxReg5[0x8F] = 0x54;
+              
+              /*                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x01; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+              */
+                                                                      ucxCCState = CC1_RA_CC2_OPEN;
+                                                              }
+                                                              else
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x02;
+                                                                      g_vucxReg5[0x8F] = 0x04;
+                                                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RD_CC2_OPEN;
+                                                              }
+                                                      }
+                                                      else if ( ( PDC_STAT_23_16 & 0x60 ) == 0x60 )//CC1_CONN,CC2_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x04;
+              
+                                                              if ( ( ( PDC_STAT_15_8 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 ) )//port partner is 
+             -CC1:Rd,CC2:Ra
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x01;
+                                                                      g_vucxReg5[0x8F] = 0x11;//
+                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x06; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RD_CC2_RA;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) && ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) )//port partne
+             -r is CC1:Ra,CC2:Rd
+                                                              {
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 6   
+
+                                                                      g_vucxReg5[0x94] = 0x02;
+                                                                      g_vucxReg5[0x8F] = 0x12;//
+                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x09; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RA_CC2_RD;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) && ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 ) )
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x03;
+                                                                      g_vucxReg5[0x8F] = 0x21;
+                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x05;
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RA_CC2_RA;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_15_8 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) )
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x04;
+                                                                      g_vucxReg5[0x8F] = 0x31;
+                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0A; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RD_CC2_RD;
+                                                              }
+                                                      }
+                                              }
+                                              else if ( ( CC_STATUS & 0x30 ) == 0x10 )//TCPC is presenting Rd
+                                              {
+                                                      g_vucxReg5[0x92] |= 0x02;
+                      
+                                                      //sink
+                                                      if ( ( PDC_STAT_23_16 & 0x60 ) == 0x40 )//CC1_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x01;
+                                                              g_vucxReg5[0x8F] = 0x41;//
+                                                              
+                                                              if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x01 ) )//port partner is 
+             -CC1:Rp:3A,CC2:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x03;
+                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x03;
+                                                                      g_ucxRpVal = RP_3_0_A;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//port partne
+             -r is CC1:Rp:1.5A,CC2:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x02;
+                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02;
+                                                                      g_ucxRpVal = RP_1_5_A;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//port partne
+             -r is CC1:Rp:0.9A,CC2:Open
+                                                              {
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 7   
+
+                                                                      g_vucxReg5[0x94] = 0x01;
+              
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x01;
+                                                                      g_ucxRpVal = RP_0_9_A;
+                                                              }
+              
+                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                              REG_DET_CTRL1 |= 0x10;
+                                                              REG_DET_CTRL1 &= 0xEF;
+                                                              ucxCCState = CC1_RP_CC2_OPEN;
+                                                      }
+                                                      if ( ( PDC_STAT_23_16 & 0x60 ) == 0x40 )//CC2_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x02;
+                                                              g_vucxReg5[0x8F] = 0x42;//
+                                                              
+                                                              if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x01 ) )//port partner is 
+             -CC2:Rp:3A,CC1:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x03;
+                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0C;
+                                                                      g_ucxRpVal = RP_3_0_A;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//port partne
+             -r is CC2:Rp:1.5A,CC1:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x02;
+                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08;
+                                                                      g_ucxRpVal = RP_1_5_A;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//port partne
+             -r is CC2:Rp:0.9A,CC1:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x01;
+              
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x04;
+                                                                      g_ucxRpVal = RP_0_9_A;
+                                                              }
+              
+                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                              REG_DET_CTRL1 |= 0x10;
+                                                              REG_DET_CTRL1 &= 0xEF;
+                                                              ucxCCState = CC1_OPEN_CC2_RP;
+                                                      }
+                                              }
+                                      }
+                                      else
+                                      {
+                                              g_vucxReg5[0x91] |= 0x02;
+              
+                                              if ( ( ROLE_CONTROL & 0x0F ) == 0x05 )//TCPC is Rp
+                                              {
+                                                      g_vucxReg5[0x92] |= 0x01;
+                              
+                                                      //source
+                                                      if ( ( PDC_STAT_23_16 & 0x60 ) == 0x20 )//CC2_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x01;
+              
+                                                              if ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 )
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 8   
+
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x01;
+                                                                      g_vucxReg5[0x8F] = 0x57;
+              
+              /*                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x04; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+              */
+                                                                      ucxCCState = CC1_OPEN_CC2_RA;
+                                                              }
+                                                              else
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x02;
+              
+                                                                      g_vucxReg5[0x8F] = 0x07;//
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_OPEN_CC2_RD;
+                                                              }
+                                                      }
+                                                      else if ( ( PDC_STAT_23_16 & 0x60 ) == 0x40 )//CC1_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x02;
+              
+                                                              if ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 )
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x01;
+                                                                      g_vucxReg5[0x8F] = 0x5A;
+              
+              /*                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x01; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+              */
+                                                                      ucxCCState = CC1_RA_CC2_OPEN;
+                                                              }
+                                                              else
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x02;
+              
+                                                                      g_vucxReg5[0x8F] = 0x0A;//
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RD_CC2_OPEN;
+                                                              }
+                                                      }
+                                                      else if ( ( PDC_STAT_23_16 & 0x60 ) == 0x60 )//CC1_CONN,CC2_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x04;
+              
+                                                              if ( ( ( PDC_STAT_15_8 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 ) )//port partner is 
+             -CC1:Rd,CC2:Ra
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x01;
+                                                                      g_vucxReg5[0x8F] = 0x13;//
+              
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x06; 
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 9   
+
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RD_CC2_RA;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) && ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) )//port partne
+             -r is CC1:Ra,CC2:Rd
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x02;
+                                                                      g_vucxReg5[0x8F] = 0x14;//
+              
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x09; 
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RA_CC2_RD;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) && ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 ) )
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x03;
+                                                                      g_vucxReg5[0x8F] = 0x23;
+              
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x05; 
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RA_CC2_RA;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_15_8 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) )
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x04;
+                                                                      g_vucxReg5[0x8F] = 0x33;
+              
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0A;
+                                                                      REG_DET_CTRL1 |= 0x10;
+                                                                      REG_DET_CTRL1 &= 0xEF;
+                                                                      ucxCCState = CC1_RD_CC2_RD;
+                                                              }
+                                                      }
+                                              }       
+                                              else if ( ( ROLE_CONTROL & 0x0F ) == 0x0A )//TCPC is Rd
+                                              {
+                                                      g_vucxReg5[0x92] |= 0x02;
+              
+                                                      //sink
+                                                      if ( ( PDC_STAT_23_16 & 0x60 ) == 0x40 )//CC1_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x01;
+                                                              g_vucxReg5[0x8F] = 0x43;//
+                                                              
+                                                              if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x01 ) )//port partner is 
+             -CC1:Rp:3A,CC2:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x03;
+                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x03;
+                                                                      g_ucxRpVal = RP_3_0_A;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//port partne
+             -r is CC1:Rp:1.5A,CC2:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x02;
+                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02;
+                                                                      g_ucxRpVal = RP_1_5_A;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 10  
+
+                                                              }
+                                                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//port partne
+             -r is CC1:Rp:0.9A,CC2:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x01;
+              
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x01;
+                                                                      g_ucxRpVal = RP_0_9_A;
+                                                              }
+              
+                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                              REG_DET_CTRL1 |= 0x10;
+                                                              REG_DET_CTRL1 &= 0xEF;
+                                                              ucxCCState = CC1_RP_CC2_OPEN;
+                                                      }
+                                                      if ( ( PDC_STAT_23_16 & 0x60 ) == 0x40 )//CC2_CONN
+                                                      {
+                                                              g_vucxReg5[0x93] |= 0x02;
+                                                              g_vucxReg5[0x8F] = 0x44;//
+                                                              
+                                                              if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x01 ) )//port partner is 
+             -CC2:Rp:3A,CC1:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x03;
+                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0C;
+                                                                      g_ucxRpVal = RP_3_0_A;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//port partne
+             -r is CC2:Rp:1.5A,CC1:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x02;
+                                      
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08;
+                                                                      g_ucxRpVal = RP_1_5_A;
+                                                              }
+                                                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//port partne
+             -r is CC2:Rp:0.9A,CC1:Open
+                                                              {
+                                                                      g_vucxReg5[0x94] = 0x01;
+              
+                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x04;
+                                                                      g_ucxRpVal = RP_0_9_A;
+                                                              }
+              
+                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+                                                              REG_DET_CTRL1 |= 0x10;
+                                                              REG_DET_CTRL1 &= 0xEF;
+                                                              ucxCCState = CC1_OPEN_CC2_RP;
+                                                      }
+                                              }
+                                      }
+              #else
+ 580   3      
+ 581   3      CC_SAMPLE:
+ 582   3                              if ( REG_DET_CTRL2 & 0x40 )//ADC is sampling VBUS
+ 583   3                              {
+ 584   4                                      REG_DET_CTRL2 &= 0x9B;//stop
+ 585   4                                      REG_DLPF_CTRL0 |= 0x80;//Software reset for low pass filter
+ 586   4                                      REG_DLPF_CTRL0 &= 0x7F;
+ 587   4                                      g_ucxExitSample = 1;
+ 588   4                              }
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 11  
+
+ 589   3      
+ 590   3      //g_vucxReg5[0x9B] = CC_DET_IRQ_INT0;
+ 591   3      //g_vucxReg5[0x9C] = CC_DET_IRQ_STATUS0;
+ 592   3      //g_vucxReg5[0x9D] = PDC_STAT_23_16;
+ 593   3      
+ 594   3      //      ADDRCFG0 = 0x15;//enable I2C access     ******this line should be removed, otherwise monitor will be failed
+             -****
+ 595   3      //g_vucxReg5[0x33] = CC_STATUS;
+ 596   3      //REG_GPIOP_OUT = REG_GPIOP_OUT | (GPIO6);
+ 597   3                              REG_DET_CTRL0 &= 0xB4;//stop
+ 598   3                              CC_DET_IRQ_STATUS2 = 0x04;
+ 599   3                              REG_DET_CTRL2 &= 0x9B;
+ 600   3      //                      if( CC_DET_IRQ_INT0 & 0x08 )    // CC1_CONN_FILT_STATUS
+ 601   3                              {
+ 602   4                                      REG_DET_CTRL0 |= 0x01;//SW_ADC_CC1_EN
+ 603   4                                      REG_DET_CTRL0 |= 0x40;//SW_DLPF_START
+ 604   4                                      while ( (!(CC_DET_IRQ_STATUS2 & 0x04)) /*&& ( REG_DET_CTRL0 & 0x40 )*/ )
+ 605   4                                      {
+ 606   5                                              g_vucxReg5[0x82]++;
+ 607   5                                      }
+ 608   4                                      CC_DET_IRQ_STATUS2 = 0x04;
+ 609   4                                      REG_DET_CTRL0 &= 0xB4;//stop
+ 610   4                                      g_vucxReg5[0x20] = REG_CC1_DCC;
+ 611   4                              }
+ 612   3      //                      if ( ( REG_CC1_DCC >= 0xD0 ) && ( REG_CC1_DCC <= 0xF0 ) )
+ 613   3                              {
+ 614   4      //                              REG_GPIOP_OUT |= GPIO7;
+ 615   4                              }
+ 616   3      //g_vucxReg5[0x34] = CC_STATUS;
+ 617   3      
+ 618   3      //                      REG_DET_CTRL2 &= 0x9B;
+ 619   3      //                      if( CC_DET_IRQ_INT0 & 0x10 )    // CC2_CONN_FILT_STATUS
+ 620   3                              {
+ 621   4                                      REG_DET_CTRL0 |= 0x02;//SW_ADC_CC2_EN
+ 622   4                                      REG_DET_CTRL0 |= 0x40;//SW_DLPF_START
+ 623   4                                      while ( (!(CC_DET_IRQ_STATUS2 & 0x04)) /*&& ( REG_DET_CTRL0 & 0x40 )*/ )
+ 624   4                                      {
+ 625   5                                              g_vucxReg5[0x83]++;
+ 626   5                                      }
+ 627   4                                      CC_DET_IRQ_STATUS2 = 0x04;
+ 628   4                                      REG_DET_CTRL0 &= 0xB4;//stop
+ 629   4                                      g_vucxReg5[0x21] = REG_CC2_DCC;
+ 630   4                              }
+ 631   3      #if 1
+ 632   3                              //re-sample CC1 in case glitch when sampling CC1
+ 633   3      //                      if( CC_DET_IRQ_INT0 & 0x08 )    // CC1_CONN_FILT_STATUS
+ 634   3                              {
+ 635   4                                      REG_DET_CTRL0 |= 0x01;//SW_ADC_CC1_EN
+ 636   4                                      REG_DET_CTRL0 |= 0x40;//SW_DLPF_START
+ 637   4                                      while ( (!(CC_DET_IRQ_STATUS2 & 0x04)) /*&& ( REG_DET_CTRL0 & 0x40 )*/ )
+ 638   4                                      {
+ 639   5                                              g_vucxReg5[0x84]++;
+ 640   5                                      }
+ 641   4                                      CC_DET_IRQ_STATUS2 = 0x04;
+ 642   4                                      REG_DET_CTRL0 &= 0xB4;//stop
+ 643   4                                      g_vucxReg5[0x22] = REG_CC1_DCC;
+ 644   4                              }
+ 645   3      //                      if( CC_DET_IRQ_INT0 & 0x10 )    // CC2_CONN_FILT_STATUS
+ 646   3                              {
+ 647   4                                      REG_DET_CTRL0 |= 0x02;//SW_ADC_CC2_EN
+ 648   4                                      REG_DET_CTRL0 |= 0x40;//SW_DLPF_START
+ 649   4                                      while ( (!(CC_DET_IRQ_STATUS2 & 0x04)) /*&& ( REG_DET_CTRL0 & 0x40 )*/ )
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 12  
+
+ 650   4                                      {
+ 651   5                                              g_vucxReg5[0x85]++;
+ 652   5                                      }
+ 653   4                                      CC_DET_IRQ_STATUS2 = 0x04;
+ 654   4                                      REG_DET_CTRL0 &= 0xB4;//stop
+ 655   4                                      g_vucxReg5[0x23] = REG_CC2_DCC;
+ 656   4                              }
+ 657   3      #endif
+ 658   3              ADDRCFG0 = 0x10;//enable I2C access
+ 659   3                              if ( ( REG_CC1_DCC <= 5 ) && ( REG_CC2_DCC <= 5 ) && ( ( PDC_STAT_23_16 & 0x60 ) == 0x00 ) )
+ 660   3                              {
+ 661   4                                      g_vucxReg5[0x60]++;
+ 662   4                                      CC_DET_IRQ_STATUS0 = 0xDB;
+ 663   4                                      return;
+ 664   4                              }
+ 665   3      
+ 666   3      //REG_GPIOP_OUT = REG_GPIOP_OUT & (~GPIO6);
+ 667   3      //g_vucxReg5[0x35] = CC_STATUS;
+ 668   3      
+ 669   3      //      ADDRCFG0 = 0x10;//enable I2C access
+ 670   3                              if ( ( ROLE_CONTROL & 0x40 ) == 0x40 )//DRP
+ 671   3                              {
+ 672   4                                      g_vucxReg5[0x91] |= 0x01;
+ 673   4                                      
+ 674   4      //                              if ( ( ROLE_CONTROL & 0xC0 ) == 0x40 )//DRP
+ 675   4      //                              {
+ 676   4      //                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 677   4      //g_vucxReg5[0x36] = CC_STATUS;
+ 678   4      //g_vucxReg5[0x01] = 0;
+ 679   4      //g_vucxReg5[0x37] = COMMAND;
+ 680   4                                              if ( ( CC_STATUS & 0x10 ) == 0x00 )//TCPC is presenting Rp
+ 681   4                                              {
+ 682   5                                                      g_vucxReg5[0x92] |= 0x01;
+ 683   5      
+ 684   5                                                      //source
+ 685   5                                                      if ( REG_CC1_DCC == 0xFF )
+ 686   5                                                      {
+ 687   6                                                              g_vucxReg5[0x93] |= 0x01;
+ 688   6      
+ 689   6                                                              if ( ( ROLE_CONTROL & 0x30 ) == 0x00 )//TCPC Rp is 0.9A
+ 690   6                                                              {
+ 691   7                                                                      if ( REG_CC2_DCC < 20 )
+ 692   7                                                                      {
+ 693   8                                                                              g_vucxReg5[0x94] = 0x01;
+ 694   8                                                                              g_vucxReg5[0x8F] = 0x51;
+ 695   8      
+ 696   8      /*                                                                      if ( ucxCCState != CC1_OPEN_CC2_RA )
+ 697   8                                                                              {
+ 698   8                                                                                      REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+ 699   8                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 700   8                                                                                      REG_DET_CTRL1 |= 0x10;
+ 701   8                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 702   8                                                                              }*/
+ 703   8                                                                              ucxCCState = CC1_OPEN_CC2_RA;
+ 704   8                                                                      }
+ 705   7                                                                      else if ( REG_CC2_DCC <= 165 )
+ 706   7                                                                      {
+ 707   8                                                                              g_vucxReg5[0x94] = 0x02;
+ 708   8      
+ 709   8                                                                              g_vucxReg5[0x8F] = 0x01;
+ 710   8                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+ 711   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 13  
+
+ 712   8                                                                              REG_DET_CTRL1 |= 0x10;
+ 713   8                                                                              REG_DET_CTRL1 &= 0xEF;
+ 714   8                                                                              ucxCCState = CC1_OPEN_CC2_RD;
+ 715   8                                                                      }
+ 716   7                                                              }
+ 717   6                                                              else if ( ( ROLE_CONTROL & 0x30 ) == 0x10 )//TCPC Rp is 1.5A
+ 718   6                                                              {
+ 719   7                                                                      if ( REG_CC2_DCC < 40 )
+ 720   7                                                                      {
+ 721   8                                                                              g_vucxReg5[0x94] = 0x03;
+ 722   8                                                                              g_vucxReg5[0x8F] = 0x52;
+ 723   8      
+ 724   8      /*                                                                      if ( ucxCCState != CC1_OPEN_CC2_RA )
+ 725   8                                                                              {
+ 726   8                                                                                      REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+ 727   8                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 728   8                                                                                      REG_DET_CTRL1 |= 0x10;
+ 729   8                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 730   8                                                                              }*/
+ 731   8                                                                              ucxCCState = CC1_OPEN_CC2_RA;
+ 732   8                                                                      }
+ 733   7                                                                      else if ( REG_CC2_DCC <= 165 )
+ 734   7                                                                      {
+ 735   8                                                                              g_vucxReg5[0x94] = 0x04;
+ 736   8      
+ 737   8                                                                              g_vucxReg5[0x8F] = 0x02;
+ 738   8                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+ 739   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 740   8                                                                              REG_DET_CTRL1 |= 0x10;
+ 741   8                                                                              REG_DET_CTRL1 &= 0xEF;
+ 742   8                                                                              ucxCCState = CC1_OPEN_CC2_RD;
+ 743   8                                                                      }
+ 744   7                                                              }
+ 745   6                                                              else if ( ( ROLE_CONTROL & 0x30 ) == 0x20 )//TCPC Rp is 3A
+ 746   6                                                              {
+ 747   7                                                                      if ( REG_CC2_DCC < 80 )
+ 748   7                                                                      {
+ 749   8                                                                              g_vucxReg5[0x94] = 0x05;
+ 750   8                                                                              g_vucxReg5[0x8F] = 0x53;//pass
+ 751   8      
+ 752   8      /*                                                                      if ( ucxCCState != CC1_OPEN_CC2_RA )
+ 753   8                                                                              {
+ 754   8                                                                                      REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+ 755   8                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 756   8                                                                                      REG_DET_CTRL1 |= 0x10;
+ 757   8                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 758   8                                                                              }*/
+ 759   8                                                                              ucxCCState = CC1_OPEN_CC2_RA;
+ 760   8                                                                      }
+ 761   7                                                                      else if ( REG_CC2_DCC <= 245 )
+ 762   7                                                                      {
+ 763   8                                                                              g_vucxReg5[0x94] = 0x06;
+ 764   8      
+ 765   8                                                                              g_vucxReg5[0x8F] = 0x03;//pass
+ 766   8                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+ 767   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 768   8                                                                              REG_DET_CTRL1 |= 0x10;
+ 769   8                                                                              REG_DET_CTRL1 &= 0xEF;
+ 770   8                                                                              ucxCCState = CC1_OPEN_CC2_RD;
+ 771   8                                                                      }
+ 772   7                                                              }
+ 773   6                                                      }
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 14  
+
+ 774   5                                                      else if ( REG_CC2_DCC == 0xFF )
+ 775   5                                                      {
+ 776   6                                                              g_vucxReg5[0x93] |= 0x02;
+ 777   6                                                              if ( ( ROLE_CONTROL & 0x30 ) == 0x00 )//TCPC Rp is 0.9A
+ 778   6                                                              {
+ 779   7                                                                      if ( REG_CC1_DCC < 20 )
+ 780   7                                                                      {
+ 781   8                                                                              g_vucxReg5[0x94] = 0x01;
+ 782   8                                                                              g_vucxReg5[0x8F] = 0x54;
+ 783   8      
+ 784   8      /*                                                                      if ( ucxCCState != CC1_RA_CC2_OPEN )
+ 785   8                                                                              {
+ 786   8                                                                                      REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+ 787   8                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 788   8                                                                                      REG_DET_CTRL1 |= 0x10;
+ 789   8                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 790   8                                                                              }*/
+ 791   8                                                                              ucxCCState = CC1_RA_CC2_OPEN;
+ 792   8                                                                      }
+ 793   7                                                                      else if ( REG_CC1_DCC <= 165 )
+ 794   7                                                                      {
+ 795   8                                                                              g_vucxReg5[0x94] = 0x02;
+ 796   8      
+ 797   8                                                                              g_vucxReg5[0x8F] = 0x04;
+ 798   8                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+ 799   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 800   8                                                                              REG_DET_CTRL1 |= 0x10;
+ 801   8                                                                              REG_DET_CTRL1 &= 0xEF;
+ 802   8                                                                              ucxCCState = CC1_RD_CC2_OPEN;
+ 803   8                                                                      }
+ 804   7                                                              }
+ 805   6                                                              else if ( ( ROLE_CONTROL & 0x30 ) == 0x10 )//TCPC Rp is 1.5A
+ 806   6                                                              {
+ 807   7                                                                      if ( REG_CC1_DCC < 40 )
+ 808   7                                                                      {
+ 809   8                                                                              g_vucxReg5[0x94] = 0x03;
+ 810   8                                                                              g_vucxReg5[0x8F] = 0x55;
+ 811   8      
+ 812   8      /*                                                                      if ( ucxCCState != CC1_RA_CC2_OPEN )
+ 813   8                                                                              {
+ 814   8                                                                                      REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+ 815   8                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 816   8                                                                                      REG_DET_CTRL1 |= 0x10;
+ 817   8                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 818   8                                                                              }*/
+ 819   8                                                                              ucxCCState = CC1_RA_CC2_OPEN;
+ 820   8                                                                      }
+ 821   7                                                                      else if ( REG_CC1_DCC <= 165 )
+ 822   7                                                                      {
+ 823   8                                                                              g_vucxReg5[0x94] = 0x04;
+ 824   8      
+ 825   8                                                                              g_vucxReg5[0x8F] = 0x05;
+ 826   8                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+ 827   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 828   8                                                                              REG_DET_CTRL1 |= 0x10;
+ 829   8                                                                              REG_DET_CTRL1 &= 0xEF;
+ 830   8                                                                              ucxCCState = CC1_RD_CC2_OPEN;
+ 831   8                                                                      }
+ 832   7                                                              }
+ 833   6                                                              else if ( ( ROLE_CONTROL & 0x30 ) == 0x20 )//TCPC Rp is 3A
+ 834   6                                                              {
+ 835   7                                                                      if ( REG_CC1_DCC < 80 )
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 15  
+
+ 836   7                                                                      {
+ 837   8                                                                              g_vucxReg5[0x94] = 0x05;
+ 838   8                                                                              g_vucxReg5[0x8F] = 0x56;//pass
+ 839   8      
+ 840   8      /*                                                                      if ( ucxCCState != CC1_RA_CC2_OPEN )
+ 841   8                                                                              {
+ 842   8                                                                                      REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+ 843   8                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 844   8                                                                                      REG_DET_CTRL1 |= 0x10;
+ 845   8                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 846   8                                                                              }*/
+ 847   8                                                                              ucxCCState = CC1_RA_CC2_OPEN;
+ 848   8                                                                      }
+ 849   7                                                                      else if ( REG_CC1_DCC <= 245 )
+ 850   7                                                                      {
+ 851   8                                                                              g_vucxReg5[0x94] = 0x06;
+ 852   8      
+ 853   8                                                                              g_vucxReg5[0x8F] = 0x06;//pass
+ 854   8                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+ 855   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 856   8                                                                              REG_DET_CTRL1 |= 0x10;
+ 857   8                                                                              REG_DET_CTRL1 &= 0xEF;
+ 858   8                                                                              ucxCCState = CC1_RD_CC2_OPEN;
+ 859   8                                                                      }
+ 860   7                                                              }
+ 861   6                                                      }
+ 862   5                                                      else
+ 863   5                                                      {
+ 864   6                                                              g_vucxReg5[0x93] |= 0x04;
+ 865   6      
+ 866   6      //                                                      if ( ( REG_CC1_DCC > REG_CC2_DCC ) && ( REG_CC1_DCC - REG_CC2_DCC > 5 ) )//port partner is CC1:Rd
+             -,CC2:Ra
+ 867   6                                                              if ( ( REG_CC1_DCC > REG_CC2_DCC ) && ( REG_CC1_DCC - REG_CC2_DCC >= 10 ) )//port partner is CC1:Rd
+             -,CC2:Ra
+ 868   6                                                              {
+ 869   7                                                                      {
+ 870   8                                                                              if ( REG_CC1_DCC <= 245 )
+ 871   8                                                                              {
+ 872   9                                                                                      g_vucxReg5[0x94] = 0x01;
+ 873   9                                                                                      g_vucxReg5[0x8F] = 0x11;//pass
+ 874   9              
+ 875   9                                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x06; 
+ 876   9                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 877   9                                                                                      REG_DET_CTRL1 |= 0x10;
+ 878   9                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 879   9                                                                                      ucxCCState = CC1_RD_CC2_RA;
+ 880   9                                                                              }
+ 881   8                                                                      }
+ 882   7                                                              }
+ 883   6      //                                                      else if ( ( REG_CC2_DCC > REG_CC1_DCC ) && ( REG_CC2_DCC - REG_CC1_DCC > 5 ) )//port partner is C
+             -C1:Ra,CC2:Rd
+ 884   6                                                              else if ( ( REG_CC2_DCC > REG_CC1_DCC ) && ( REG_CC2_DCC - REG_CC1_DCC >= 10 ) )//port partner is C
+             -C1:Ra,CC2:Rd
+ 885   6                                                              {
+ 886   7                                                                      {
+ 887   8                                                                              if ( REG_CC2_DCC <= 245 )
+ 888   8                                                                              {
+ 889   9                                                                                      g_vucxReg5[0x94] = 0x02;
+ 890   9                                                                                      g_vucxReg5[0x8F] = 0x12;//pass
+ 891   9              
+ 892   9                                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x09; 
+ 893   9                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 16  
+
+ 894   9                                                                                      REG_DET_CTRL1 |= 0x10;
+ 895   9                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 896   9                                                                                      ucxCCState = CC1_RA_CC2_RD;
+ 897   9                                                                              }
+ 898   8                                                                      }
+ 899   7                                                              }
+ 900   6                                                              else//CC1 == CC2
+ 901   6                                                              {
+ 902   7                                                                      if ( ( ( ROLE_CONTROL & 0x30 ) == 0x00 ) || ( ( ROLE_CONTROL & 0x30 ) == 0x10 ) )//TCPC Rp is 0.9A
+             - or 1.5A
+ 903   7                                                                      {
+ 904   8                                                                              if ( REG_CC1_DCC <= 40 )
+ 905   8                                                                              {
+ 906   9                                                                                      g_vucxReg5[0x94] = 0x03;
+ 907   9                                                                                      g_vucxReg5[0x8F] = 0x21;
+ 908   9              
+ 909   9                                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x05;
+ 910   9                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 911   9                                                                                      REG_DET_CTRL1 |= 0x10;
+ 912   9                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 913   9                                                                                      ucxCCState = CC1_RA_CC2_RA;
+ 914   9                                                                              }
+ 915   8                                                                              else if ( REG_CC1_DCC <= 165 )
+ 916   8                                                                              {
+ 917   9                                                                                      g_vucxReg5[0x94] = 0x04;
+ 918   9                                                                                      g_vucxReg5[0x8F] = 0x31;
+ 919   9              
+ 920   9                                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0A; 
+ 921   9                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 922   9                                                                                      REG_DET_CTRL1 |= 0x10;
+ 923   9                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 924   9                                                                                      ucxCCState = CC1_RD_CC2_RD;
+ 925   9                                                                              }
+ 926   8                                                                      }
+ 927   7                                                                      else if ( ( ROLE_CONTROL & 0x30 ) == 0x20 )//TCPC Rp is 3A
+ 928   7                                                                      {
+ 929   8                                                                              if ( REG_CC1_DCC <= 80 )
+ 930   8                                                                              {
+ 931   9                                                                                      g_vucxReg5[0x94] = 0x05;
+ 932   9                                                                                      g_vucxReg5[0x8F] = 0x22;//pass
+ 933   9              
+ 934   9                                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x05;
+ 935   9                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 936   9                                                                                      REG_DET_CTRL1 |= 0x10;
+ 937   9                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 938   9                                                                                      ucxCCState = CC1_RA_CC2_RA;
+ 939   9                                                                              }
+ 940   8                                                                              else if ( REG_CC1_DCC <= 245 )
+ 941   8                                                                              {
+ 942   9                                                                                      g_vucxReg5[0x94] = 0x06;
+ 943   9                                                                                      g_vucxReg5[0x8F] = 0x32;//pass
+ 944   9              
+ 945   9                                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0A; 
+ 946   9                                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 947   9                                                                                      REG_DET_CTRL1 |= 0x10;
+ 948   9                                                                                      REG_DET_CTRL1 &= 0xEF;
+ 949   9                                                                                      ucxCCState = CC1_RD_CC2_RD;
+ 950   9                                                                              }
+ 951   8                                                                      }
+ 952   7                                                              }
+ 953   6                                                      }
+ 954   5                                              }
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 17  
+
+ 955   4                                              else if ( ( CC_STATUS & 0x10 ) == 0x10 )//TCPC is presenting Rd
+ 956   4                                              {
+ 957   5                                                      g_vucxReg5[0x92] |= 0x02;
+ 958   5              
+ 959   5                                                      //sink
+ 960   5                                                      if ( REG_CC2_DCC <= 20 )
+ 961   5                                                      {
+ 962   6                                                              g_vucxReg5[0x93] |= 0x01;
+ 963   6      
+ 964   6                                                              g_vucxReg5[0x8F] = 0x41;//pass
+ 965   6                                                              if ( ( REG_CC1_DCC >= 25 ) && ( REG_CC1_DCC <= 66 ) )//port partner is CC1:Rp:0.9A,CC2:Open
+ 966   6                                                              {
+ 967   7                                                                      g_vucxReg5[0x94] = 0x01;
+ 968   7      
+ 969   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x01;
+ 970   7                                                              }
+ 971   6                                                              else if ( ( REG_CC1_DCC > 66 ) && ( REG_CC1_DCC <= 123 ) )//port partner is CC1:Rp:1.5A,CC2:Open
+ 972   6                                                              {
+ 973   7                                                                      g_vucxReg5[0x94] = 0x02;
+ 974   7                              
+ 975   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02;
+ 976   7                                                              }
+ 977   6                                                              else if ( ( REG_CC1_DCC > 123 ) && ( REG_CC1_DCC <= 204 ) )//port partner is CC1:Rp:3A,CC2:Open
+ 978   6                                                              {
+ 979   7                                                                      g_vucxReg5[0x94] = 0x03;
+ 980   7                              
+ 981   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x03;
+ 982   7                                                              }
+ 983   6                                                              else if ( REG_CC1_DCC > 204 )//CC voltage abnormal
+ 984   6                                                              {
+ 985   7                                                                      g_vucxReg5[0x97]++;
+ 986   7                                                                      g_vucxReg5[0x98] = REG_CC1_DCC;
+ 987   7              
+ 988   7                                                                      goto CC_SAMPLE;
+ 989   7                                                              }
+ 990   6                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+ 991   6                                                              REG_DET_CTRL1 |= 0x10;
+ 992   6                                                              REG_DET_CTRL1 &= 0xEF;
+ 993   6                                                              ucxCCState = CC1_RP_CC2_OPEN;
+ 994   6                                                      }
+ 995   5                                                      if ( REG_CC1_DCC <= 20 )
+ 996   5                                                      {
+ 997   6                                                              g_vucxReg5[0x93] |= 0x02;
+ 998   6      
+ 999   6                                                              g_vucxReg5[0x8F] = 0x42;//pass
+1000   6                                                              if ( ( REG_CC2_DCC >= 25 ) && ( REG_CC2_DCC <= 66 ) )//port partner is CC2:Rp:0.9A,CC1:Open
+1001   6                                                              {
+1002   7                                                                      g_vucxReg5[0x94] = 0x01;
+1003   7                              
+1004   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x04;
+1005   7                                                              }
+1006   6                                                              else if ( ( REG_CC2_DCC > 66 ) && ( REG_CC2_DCC <= 123 ) )//port partner is CC2:Rp:1.5A,CC1:Open
+1007   6                                                              {
+1008   7                                                                      g_vucxReg5[0x94] = 0x02;
+1009   7                              
+1010   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08;
+1011   7                                                              }
+1012   6                                                              else if ( ( REG_CC2_DCC > 123 ) && ( REG_CC2_DCC <= 204 ) )//port partner is CC2:Rp:3A,CC1:Open
+1013   6                                                              {
+1014   7                                                                      g_vucxReg5[0x94] = 0x03;
+1015   7                              
+1016   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0C;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 18  
+
+1017   7                                                              }
+1018   6                                                              else if ( REG_CC2_DCC > 204 )//CC voltage abnormal
+1019   6                                                              {
+1020   7                                                                      g_vucxReg5[0x97]++;
+1021   7                                                                      g_vucxReg5[0x98] = REG_CC2_DCC;
+1022   7              
+1023   7                                                                      goto CC_SAMPLE;
+1024   7                                                              }
+1025   6                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1026   6                                                              REG_DET_CTRL1 |= 0x10;
+1027   6                                                              REG_DET_CTRL1 &= 0xEF;
+1028   6                                                              ucxCCState = CC1_OPEN_CC2_RP;
+1029   6                                                      }
+1030   5                                                      if ( ( REG_CC1_DCC >= 25 ) && ( REG_CC2_DCC >= 25 ) )
+1031   5                                                      {
+1032   6                                                              g_vucxReg5[0x93] |= 0x04;
+1033   6              
+1034   6                                                              if ( ( REG_CC1_DCC >= 25 ) && ( REG_CC1_DCC <= 66 ) )//port partner is CC1:Rp:0.9A,CC2:Open
+1035   6                                                              {
+1036   7                                                                      g_vucxReg5[0x94] |= 0x01;
+1037   7                              
+1038   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xFC ) | 0x01;
+1039   7                                                              }
+1040   6                                                              else if ( ( REG_CC1_DCC > 66 ) && ( REG_CC1_DCC <= 123 ) )//port partner is CC1:Rp:1.5A,CC2:Open
+1041   6                                                              {
+1042   7                                                                      g_vucxReg5[0x94] |= 0x02;
+1043   7              
+1044   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xFC ) | 0x02; 
+1045   7                                                              }
+1046   6                                                              else if ( ( REG_CC1_DCC > 123 ) && ( REG_CC1_DCC <= 204 ) )//port partner is CC1:Rp:3A,CC2:Open
+1047   6                                                              {
+1048   7                                                                      g_vucxReg5[0x94] |= 0x03;
+1049   7              
+1050   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xFC ) | 0x03; 
+1051   7                                                              }
+1052   6              
+1053   6                                                              if ( ( REG_CC2_DCC >= 25 ) && ( REG_CC2_DCC <= 66 ) )//port partner is CC2:Rp:0.9A,CC1:Open
+1054   6                                                              {
+1055   7                                                                      g_vucxReg5[0x94] |= 0x10;
+1056   7              
+1057   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF3 ) | 0x04;
+1058   7                                                              }
+1059   6                                                              else if ( ( REG_CC2_DCC > 66 ) && ( REG_CC2_DCC <= 123 ) )//port partner is CC2:Rp:1.5A,CC1:Open
+1060   6                                                              {
+1061   7                                                                      g_vucxReg5[0x94] |= 0x20;
+1062   7              
+1063   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF3 ) | 0x08; 
+1064   7                                                              }
+1065   6                                                              else if ( ( REG_CC2_DCC > 123 ) && ( REG_CC2_DCC <= 204 ) )//port partner is CC2:Rp:3A,CC1:Open
+1066   6                                                              {
+1067   7                                                                      g_vucxReg5[0x94] |= 0x30;
+1068   7              
+1069   7                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF3 ) | 0x0C; 
+1070   7                                                              }
+1071   6                                                              g_vucxReg5[0x8F] = 0x45;
+1072   6                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1073   6                                                              REG_DET_CTRL1 |= 0x10;
+1074   6                                                              REG_DET_CTRL1 &= 0xEF;
+1075   6                                                              ucxCCState = CC1_RP_CC2_RP;
+1076   6                                                      }
+1077   5      /*                                              else
+1078   5                                                      {
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 19  
+
+1079   5                                                              g_vucxReg0[0x5D]++;
+1080   5                                                              g_vucxReg5[0x99]++;
+1081   5                                                              g_vucxReg5[0x23] = REG_CC1_DCC;
+1082   5                                                              g_vucxReg5[0x24] = REG_CC2_DCC;
+1083   5                      
+1084   5                                                              goto CC_SAMPLE;
+1085   5                                                      }*/
+1086   5                                              }
+1087   4      //                              }
+1088   4                              }
+1089   3                              else
+1090   3                              {
+1091   4                                      g_vucxReg5[0x91] |= 0x02;
+1092   4      
+1093   4                                      if ( ( ROLE_CONTROL & 0x03 ) == 0x01 )//TCPC is Rp
+1094   4                                      {
+1095   5                                              g_vucxReg5[0x92] |= 0x01;
+1096   5                      
+1097   5                                              //source
+1098   5                                              if ( REG_CC1_DCC == 0xFF )
+1099   5                                              {
+1100   6                                                      g_vucxReg5[0x93] |= 0x01;
+1101   6      
+1102   6                                                      if ( ( ROLE_CONTROL & 0x30 ) == 0x00 )//TCPC Rp is 0.9A
+1103   6                                                      {
+1104   7                                                              if ( REG_CC2_DCC < 20 )
+1105   7                                                              {
+1106   8                                                                      g_vucxReg5[0x94] = 0x01;
+1107   8                                                                      g_vucxReg5[0x8F] = 0x57;
+1108   8      
+1109   8      /*                                                              if ( ucxCCState != CC1_OPEN_CC2_RA )
+1110   8                                                                      {
+1111   8                                                                              REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+1112   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1113   8                                                                              REG_DET_CTRL1 |= 0x10;
+1114   8                                                                              REG_DET_CTRL1 &= 0xEF;
+1115   8                                                                      }*/
+1116   8                                                                      ucxCCState = CC1_OPEN_CC2_RA;
+1117   8                                                              }
+1118   7                                                              else if ( REG_CC2_DCC <= 165 )
+1119   7                                                              {
+1120   8                                                                      g_vucxReg5[0x94] = 0x02;
+1121   8      
+1122   8                                                                      g_vucxReg5[0x8F] = 0x07;
+1123   8                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+1124   8                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1125   8                                                                      REG_DET_CTRL1 |= 0x10;
+1126   8                                                                      REG_DET_CTRL1 &= 0xEF;
+1127   8                                                                      ucxCCState = CC1_OPEN_CC2_RD;
+1128   8                                                              }
+1129   7                                                      }
+1130   6                                                      else if ( ( ROLE_CONTROL & 0x30 ) == 0x10 )//TCPC Rp is 1.5A
+1131   6                                                      {
+1132   7                                                              if ( REG_CC2_DCC < 40 )
+1133   7                                                              {
+1134   8                                                                      g_vucxReg5[0x94] = 0x03;
+1135   8                                                                      g_vucxReg5[0x8F] = 0x58;
+1136   8      
+1137   8      /*                                                              if ( ucxCCState != CC1_OPEN_CC2_RA )
+1138   8                                                                      {
+1139   8                                                                              REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+1140   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 20  
+
+1141   8                                                                              REG_DET_CTRL1 |= 0x10;
+1142   8                                                                              REG_DET_CTRL1 &= 0xEF;
+1143   8                                                                      }*/
+1144   8                                                                      ucxCCState = CC1_OPEN_CC2_RA;
+1145   8                                                              }
+1146   7                                                              else if ( REG_CC2_DCC <= 165 )
+1147   7                                                              {
+1148   8                                                                      g_vucxReg5[0x94] = 0x04;
+1149   8      
+1150   8                                                                      g_vucxReg5[0x8F] = 0x08;
+1151   8                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+1152   8                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1153   8                                                                      REG_DET_CTRL1 |= 0x10;
+1154   8                                                                      REG_DET_CTRL1 &= 0xEF;
+1155   8                                                                      ucxCCState = CC1_OPEN_CC2_RD;
+1156   8                                                              }
+1157   7                                                      }
+1158   6                                                      else if ( ( ROLE_CONTROL & 0x30 ) == 0x20 )//TCPC Rp is 3A
+1159   6                                                      {
+1160   7                                                              if ( REG_CC2_DCC < 80 )
+1161   7                                                              {
+1162   8                                                                      g_vucxReg5[0x94] = 0x05;
+1163   8                                                                      g_vucxReg5[0x8F] = 0x59;
+1164   8      
+1165   8      /*                                                              if ( ucxCCState != CC1_OPEN_CC2_RA )
+1166   8                                                                      {
+1167   8                                                                              REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+1168   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1169   8                                                                              REG_DET_CTRL1 |= 0x10;
+1170   8                                                                              REG_DET_CTRL1 &= 0xEF;
+1171   8                                                                      }*/
+1172   8                                                                      ucxCCState = CC1_OPEN_CC2_RA;
+1173   8                                                              }
+1174   7                                                              else if ( REG_CC2_DCC <= 245 )
+1175   7                                                              {
+1176   8                                                                      g_vucxReg5[0x94] = 0x06;
+1177   8      
+1178   8                                                                      g_vucxReg5[0x8F] = 0x09;
+1179   8                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+1180   8                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1181   8                                                                      REG_DET_CTRL1 |= 0x10;
+1182   8                                                                      REG_DET_CTRL1 &= 0xEF;
+1183   8                                                                      ucxCCState = CC1_OPEN_CC2_RD;
+1184   8                                                              }
+1185   7                                                      }
+1186   6                                              }
+1187   5                                              else if ( REG_CC2_DCC == 0xFF )
+1188   5                                              {
+1189   6                                                      g_vucxReg5[0x93] |= 0x02;
+1190   6      
+1191   6                                                      if ( ( ROLE_CONTROL & 0x30 ) == 0x00 )//TCPC Rp is 0.9A
+1192   6                                                      {
+1193   7                                                              if ( REG_CC1_DCC < 20 )
+1194   7                                                              {
+1195   8                                                                      g_vucxReg5[0x94] = 0x01;
+1196   8                                                                      g_vucxReg5[0x8F] = 0x5A;
+1197   8      
+1198   8      /*                                                              if ( ucxCCState != CC1_RA_CC2_OPEN )
+1199   8                                                                      {
+1200   8                                                                              REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+1201   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1202   8                                                                              REG_DET_CTRL1 |= 0x10;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 21  
+
+1203   8                                                                              REG_DET_CTRL1 &= 0xEF;
+1204   8                                                                      }*/
+1205   8                                                                      ucxCCState = CC1_RA_CC2_OPEN;
+1206   8                                                              }
+1207   7                                                              else if ( REG_CC1_DCC <= 165 )
+1208   7                                                              {
+1209   8                                                                      g_vucxReg5[0x94] = 0x02;
+1210   8      
+1211   8                                                                      g_vucxReg5[0x8F] = 0x0A;
+1212   8                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+1213   8                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1214   8                                                                      REG_DET_CTRL1 |= 0x10;
+1215   8                                                                      REG_DET_CTRL1 &= 0xEF;
+1216   8                                                                      ucxCCState = CC1_RD_CC2_OPEN;
+1217   8                                                              }
+1218   7                                                      }
+1219   6                                                      else if ( ( ROLE_CONTROL & 0x30 ) == 0x10 )//TCPC Rp is 1.5A
+1220   6                                                      {
+1221   7                                                              if ( REG_CC1_DCC < 40 )
+1222   7                                                              {
+1223   8                                                                      g_vucxReg5[0x94] = 0x03;
+1224   8                                                                      g_vucxReg5[0x8F] = 0x5B;
+1225   8      
+1226   8      /*                                                              if ( ucxCCState != CC1_RA_CC2_OPEN )
+1227   8                                                                      {
+1228   8                                                                              REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+1229   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1230   8                                                                              REG_DET_CTRL1 |= 0x10;
+1231   8                                                                              REG_DET_CTRL1 &= 0xEF;
+1232   8                                                                      }*/
+1233   8                                                                      ucxCCState = CC1_RA_CC2_OPEN;
+1234   8                                                              }
+1235   7                                                              else if ( REG_CC1_DCC <= 165 )
+1236   7                                                              {
+1237   8                                                                      g_vucxReg5[0x94] = 0x04;
+1238   8      
+1239   8                                                                      g_vucxReg5[0x8F] = 0x0B;
+1240   8                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+1241   8                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1242   8                                                                      REG_DET_CTRL1 |= 0x10;
+1243   8                                                                      REG_DET_CTRL1 &= 0xEF;
+1244   8                                                                      ucxCCState = CC1_RD_CC2_OPEN;
+1245   8                                                              }
+1246   7                                                      }
+1247   6                                                      else if ( ( ROLE_CONTROL & 0x30 ) == 0x20 )//TCPC Rp is 3A
+1248   6                                                      {
+1249   7                                                              if ( REG_CC1_DCC < 80 )
+1250   7                                                              {
+1251   8                                                                      g_vucxReg5[0x94] = 0x05;
+1252   8                                                                      g_vucxReg5[0x8F] = 0x5C;
+1253   8      
+1254   8      /*                                                              if ( ucxCCState != CC1_RA_CC2_OPEN )
+1255   8                                                                      {
+1256   8                                                                              REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+1257   8                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1258   8                                                                              REG_DET_CTRL1 |= 0x10;
+1259   8                                                                              REG_DET_CTRL1 &= 0xEF;
+1260   8                                                                      }*/
+1261   8                                                                      ucxCCState = CC1_RA_CC2_OPEN;
+1262   8                                                              }
+1263   7                                                              else if ( REG_CC1_DCC <= 245 )
+1264   7                                                              {
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 22  
+
+1265   8                                                                      g_vucxReg5[0x94] = 0x06;
+1266   8      
+1267   8                                                                      g_vucxReg5[0x8F] = 0x0C;
+1268   8                                                                      REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+1269   8                                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1270   8                                                                      REG_DET_CTRL1 |= 0x10;
+1271   8                                                                      REG_DET_CTRL1 &= 0xEF;
+1272   8                                                                      ucxCCState = CC1_RD_CC2_OPEN;
+1273   8                                                              }
+1274   7                                                      }
+1275   6                                              }
+1276   5                                              else
+1277   5                                              {
+1278   6                                                      g_vucxReg5[0x93] |= 0x04;
+1279   6      
+1280   6                                                      if ( ( REG_CC1_DCC > REG_CC2_DCC ) && ( REG_CC1_DCC - REG_CC2_DCC >= 10 ) )//port partner is CC1:Rd,
+             -CC2:Ra
+1281   6                                                      {
+1282   7                                                              {
+1283   8                                                                      if ( REG_CC1_DCC <= 245 )
+1284   8                                                                      {
+1285   9                                                                              g_vucxReg5[0x94] = 0x01;
+1286   9                                                                              g_vucxReg5[0x8F] = 0x13;
+1287   9      
+1288   9                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x06; 
+1289   9                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1290   9                                                                              REG_DET_CTRL1 |= 0x10;
+1291   9                                                                              REG_DET_CTRL1 &= 0xEF;
+1292   9                                                                              ucxCCState = CC1_RD_CC2_RA;
+1293   9                                                                      }
+1294   8                                                              }
+1295   7                                                      }
+1296   6                                                      else if ( ( REG_CC2_DCC > REG_CC1_DCC ) && ( REG_CC2_DCC - REG_CC1_DCC >= 10 ) )//port partner is CC
+             -1:Ra,CC2:Rd
+1297   6                                                      {
+1298   7                                                              {
+1299   8                                                                      if ( REG_CC2_DCC <= 245 )
+1300   8                                                                      {
+1301   9                                                                              g_vucxReg5[0x94] = 0x02;
+1302   9                                                                              g_vucxReg5[0x8F] = 0x14;
+1303   9      
+1304   9                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x09; 
+1305   9                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1306   9                                                                              REG_DET_CTRL1 |= 0x10;
+1307   9                                                                              REG_DET_CTRL1 &= 0xEF;
+1308   9                                                                              ucxCCState = CC1_RA_CC2_RD;
+1309   9                                                                      }
+1310   8                                                              }
+1311   7                                                      }
+1312   6                                                      else//CC1 == CC2
+1313   6                                                      {
+1314   7                                                              if ( ( ( ROLE_CONTROL & 0x30 ) == 0x00 ) || ( ( ROLE_CONTROL & 0x30 ) == 0x10 ) )//TCPC Rp is 0.9A 
+             -or 1.5A
+1315   7                                                              {
+1316   8                                                                      if ( REG_CC1_DCC <= 40 )
+1317   8                                                                      {
+1318   9                                                                              g_vucxReg5[0x94] = 0x03;
+1319   9                                                                              g_vucxReg5[0x8F] = 0x23;
+1320   9      
+1321   9                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x05; 
+1322   9                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1323   9                                                                              REG_DET_CTRL1 |= 0x10;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 23  
+
+1324   9                                                                              REG_DET_CTRL1 &= 0xEF;
+1325   9                                                                              ucxCCState = CC1_RA_CC2_RA;
+1326   9                                                                      }
+1327   8                                                                      else if ( REG_CC1_DCC <= 165 )
+1328   8                                                                      {
+1329   9                                                                              g_vucxReg5[0x94] = 0x04;
+1330   9                                                                              g_vucxReg5[0x8F] = 0x33;
+1331   9      
+1332   9                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0A;
+1333   9                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1334   9                                                                              REG_DET_CTRL1 |= 0x10;
+1335   9                                                                              REG_DET_CTRL1 &= 0xEF;
+1336   9                                                                              ucxCCState = CC1_RD_CC2_RD;
+1337   9                                                                      }
+1338   8                                                              }
+1339   7                                                              else if ( ( ROLE_CONTROL & 0x30 ) == 0x20 )//TCPC Rp is 3A
+1340   7                                                              {
+1341   8                                                                      if ( REG_CC1_DCC <= 80 )
+1342   8                                                                      {
+1343   9                                                                              g_vucxReg5[0x94] = 0x05;
+1344   9                                                                              g_vucxReg5[0x8F] = 0x24;
+1345   9      
+1346   9                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x05; 
+1347   9                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1348   9                                                                              REG_DET_CTRL1 |= 0x10;
+1349   9                                                                              REG_DET_CTRL1 &= 0xEF;
+1350   9                                                                              ucxCCState = CC1_RA_CC2_RA;
+1351   9                                                                      }
+1352   8                                                                      else if ( REG_CC1_DCC <= 245 )
+1353   8                                                                      {
+1354   9                                                                              g_vucxReg5[0x94] = 0x06;
+1355   9                                                                              g_vucxReg5[0x8F] = 0x34;
+1356   9      
+1357   9                                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0A; 
+1358   9                                                                              REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1359   9                                                                              REG_DET_CTRL1 |= 0x10;
+1360   9                                                                              REG_DET_CTRL1 &= 0xEF;
+1361   9                                                                              ucxCCState = CC1_RD_CC2_RD;
+1362   9                                                                      }
+1363   8                                                              }
+1364   7                                                      }
+1365   6                                              }
+1366   5                                      }
+1367   4                                      else if ( ( ROLE_CONTROL & 0x03 ) == 0x02 )//TCPC is Rd
+1368   4                                      {
+1369   5                                              g_vucxReg5[0x92] |= 0x02;
+1370   5      
+1371   5                                              //sink
+1372   5                                              if ( REG_CC2_DCC <= 20 )
+1373   5                                              {
+1374   6      //REG_GPIOP_OUT |= (GPIO6);
+1375   6                                                      g_vucxReg5[0x93] |= 0x01;
+1376   6      
+1377   6                                                      if ( ( REG_CC1_DCC >= 25 ) && ( REG_CC1_DCC <= 66 ) )//port partner is CC1:Rp:0.9A,CC2:Open
+1378   6                                                      {
+1379   7                                                              g_vucxReg5[0x94] = 0x01;
+1380   7                      
+1381   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x01;
+1382   7                                                      }
+1383   6                                                      else if ( ( REG_CC1_DCC > 66 ) && ( REG_CC1_DCC <= 123 ) )//port partner is CC1:Rp:1.5A,CC2:Open
+1384   6                                                      {
+1385   7                                                              g_vucxReg5[0x94] = 0x02;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 24  
+
+1386   7      
+1387   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+1388   7                                                      }
+1389   6                                                      else if ( ( REG_CC1_DCC > 123 ) && ( REG_CC1_DCC <= 204 ) )//port partner is CC1:Rp:3A,CC2:Open
+1390   6                                                      {
+1391   7                                                              g_vucxReg5[0x94] = 0x03;
+1392   7      
+1393   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x03; 
+1394   7                                                      }
+1395   6                                                      else if ( REG_CC1_DCC > 204 )//CC voltage abnormal
+1396   6                                                      {
+1397   7                                                              g_vucxReg5[0x97]++;
+1398   7                                                              g_vucxReg5[0x98] = REG_CC1_DCC;
+1399   7      
+1400   7                                                              goto CC_SAMPLE;
+1401   7                                                      }
+1402   6                                                      g_vucxReg5[0x8F] = 0x43;//pass
+1403   6                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1404   6                                                      REG_DET_CTRL1 |= 0x10;
+1405   6                                                      REG_DET_CTRL1 &= 0xEF;
+1406   6                                                      ucxCCState = CC1_RP_CC2_OPEN;
+1407   6                                              }
+1408   5                                              if ( REG_CC1_DCC <= 20 )
+1409   5                                              {
+1410   6                                                      g_vucxReg5[0x93] |= 0x02;
+1411   6      
+1412   6                                                      if ( ( REG_CC2_DCC >= 25 ) && ( REG_CC2_DCC <= 66 ) )//port partner is CC2:Rp:0.9A,CC1:Open
+1413   6                                                      {
+1414   7                                                              g_vucxReg5[0x94] = 0x01;
+1415   7      
+1416   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x04;
+1417   7                                                      }
+1418   6                                                      else if ( ( REG_CC2_DCC > 66 ) && ( REG_CC2_DCC <= 123 ) )//port partner is CC2:Rp:1.5A,CC1:Open
+1419   6                                                      {
+1420   7                                                              g_vucxReg5[0x94] = 0x02;
+1421   7      
+1422   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+1423   7                                                      }
+1424   6                                                      else if ( ( REG_CC2_DCC > 123 ) && ( REG_CC2_DCC <= 204 ) )//port partner is CC2:Rp:3A,CC1:Open
+1425   6                                                      {
+1426   7                                                              g_vucxReg5[0x94] = 0x03;
+1427   7      
+1428   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0C; 
+1429   7                                                      }
+1430   6                                                      else if ( REG_CC2_DCC > 204 )//CC voltage abnormal
+1431   6                                                      {
+1432   7                                                              g_vucxReg5[0x97]++;
+1433   7                                                              g_vucxReg5[0x98] = REG_CC2_DCC;
+1434   7      
+1435   7                                                              goto CC_SAMPLE;
+1436   7                                                      }
+1437   6                                                      g_vucxReg5[0x8F] = 0x44;
+1438   6                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1439   6                                                      REG_DET_CTRL1 |= 0x10;
+1440   6                                                      REG_DET_CTRL1 &= 0xEF;
+1441   6                                                      ucxCCState = CC1_OPEN_CC2_RP;
+1442   6                                              }
+1443   5                                              if ( ( REG_CC1_DCC >= 25 ) && ( REG_CC2_DCC >= 25 ) )
+1444   5                                              {
+1445   6                                                      g_vucxReg5[0x93] |= 0x04;
+1446   6      
+1447   6                                                      if ( ( REG_CC1_DCC >= 25 ) && ( REG_CC1_DCC <= 66 ) )//port partner is CC1:Rp:0.9A,CC2:Open
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 25  
+
+1448   6                                                      {
+1449   7                                                              g_vucxReg5[0x94] |= 0x01;
+1450   7                      
+1451   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xFC ) | 0x01;
+1452   7                                                      }
+1453   6                                                      else if ( ( REG_CC1_DCC > 66 ) && ( REG_CC1_DCC <= 123 ) )//port partner is CC1:Rp:1.5A,CC2:Open
+1454   6                                                      {
+1455   7                                                              g_vucxReg5[0x94] |= 0x02;
+1456   7      
+1457   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xFC ) | 0x02; 
+1458   7                                                      }
+1459   6                                                      else if ( ( REG_CC1_DCC > 123 ) && ( REG_CC1_DCC <= 204 ) )//port partner is CC1:Rp:3A,CC2:Open
+1460   6                                                      {
+1461   7                                                              g_vucxReg5[0x94] |= 0x03;
+1462   7      
+1463   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xFC ) | 0x03; 
+1464   7                                                      }
+1465   6      
+1466   6                                                      if ( ( REG_CC2_DCC >= 25 ) && ( REG_CC2_DCC <= 66 ) )//port partner is CC2:Rp:0.9A,CC1:Open
+1467   6                                                      {
+1468   7                                                              g_vucxReg5[0x94] |= 0x10;
+1469   7      
+1470   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF3 ) | 0x04;
+1471   7                                                      }
+1472   6                                                      else if ( ( REG_CC2_DCC > 66 ) && ( REG_CC2_DCC <= 123 ) )//port partner is CC2:Rp:1.5A,CC1:Open
+1473   6                                                      {
+1474   7                                                              g_vucxReg5[0x94] |= 0x20;
+1475   7      
+1476   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF3 ) | 0x08; 
+1477   7                                                      }
+1478   6                                                      else if ( ( REG_CC2_DCC > 123 ) && ( REG_CC2_DCC <= 204 ) )//port partner is CC2:Rp:3A,CC1:Open
+1479   6                                                      {
+1480   7                                                              g_vucxReg5[0x94] |= 0x30;
+1481   7      
+1482   7                                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF3 ) | 0x0C; 
+1483   7                                                      }
+1484   6                                                      g_vucxReg5[0x8F] = 0x45;
+1485   6                                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1486   6                                                      REG_DET_CTRL1 |= 0x10;
+1487   6                                                      REG_DET_CTRL1 &= 0xEF;
+1488   6                                                      ucxCCState = CC1_RP_CC2_RP;
+1489   6                                              } 
+1490   5      /*                                      else
+1491   5                                              {
+1492   5                                                      g_vucxReg5[0x99]++;
+1493   5                                                      g_vucxReg5[0x23] = REG_CC1_DCC;
+1494   5                                                      g_vucxReg5[0x24] = REG_CC2_DCC;
+1495   5              
+1496   5                                                      goto CC_SAMPLE;
+1497   5                                              }*/
+1498   5                                      }
+1499   4                              }
+1500   3      #endif//COMPARATOR
+1501   3      
+1502   3                              if ( ( ucxCCState == CC1_RD_CC2_OPEN ) || ( ucxCCState == CC1_RD_CC2_RA ) )
+1503   3                              {
+1504   4      //                              REG_GPIOP_OUT &= (~GPIO7);
+1505   4                                      ALERT_MASK_LOW |= 0x01;
+1506   4                                      g_vucxReg5[0x95] |= 0x01;
+1507   4                                      g_vucxReg5[0x96] = 0x01;
+1508   4      
+1509   4                                      DISABLE_DISCHARGE_VBUS;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 26  
+
+1510   4                                      REG_DET_CTRL0 &= 0xDF;//SW_CC2_DISABLE
+1511   4                                      REG_DET_CTRL0 |= 0x10;//SW_CC1_EN
+1512   4                                      g_vucxReg2[0x30] = REG_DET_CTRL0;
+1513   4                                      REG_CC_DET_INT_MASK5 |= 0x20;//[5]RPCUR_DEB_CHG_INT_MASK
+1514   4                                      AOP_REG_ANATOP_7_0 &= 0xDF;//unflip
+1515   4                                      REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_M
+             -ASK
+1516   4                              }
+1517   3                              else if ( ( ucxCCState == CC1_OPEN_CC2_RD ) || ( ucxCCState == CC1_RA_CC2_RD ) )
+1518   3                              {
+1519   4      //                              REG_GPIOP_OUT &= (~GPIO7);
+1520   4                                      ALERT_MASK_LOW |= 0x01;
+1521   4                                      g_vucxReg5[0x95] |= 0x02;
+1522   4                                      g_vucxReg5[0x96] = 0x02;
+1523   4      
+1524   4                                      DISABLE_DISCHARGE_VBUS;
+1525   4                                      REG_DET_CTRL0 &= 0xEF;//SW_CC1_DISABLE
+1526   4                                      REG_DET_CTRL0 |= 0x20;//SW_CC2_EN
+1527   4                                      g_vucxReg2[0x30] = REG_DET_CTRL0;
+1528   4                                      REG_CC_DET_INT_MASK5 |= 0x20;//[5]RPCUR_DEB_CHG_INT_MASK
+1529   4                                      AOP_REG_ANATOP_7_0 |= 0x20;//flip
+1530   4                                      REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_M
+             -ASK
+1531   4                              }
+1532   3                              else if ( ( ucxCCState == CC1_RP_CC2_OPEN )/* || ( ucxCCState == CC1_RP_CC2_RA )*/ )
+1533   3                              {
+1534   4      //                              REG_GPIOP_OUT &= (~GPIO7);
+1535   4                                      ALERT_MASK_LOW |= 0x01;
+1536   4                                      g_vucxReg5[0x95] |= 0x04;
+1537   4                                      g_vucxReg5[0x96] = 0x04;
+1538   4      
+1539   4                                      DISABLE_DISCHARGE_VBUS;
+1540   4                                      REG_DET_CTRL0 &= 0xDF;//SW_CC2_DISABLE
+1541   4                                      REG_DET_CTRL0 |= 0x10;//SW_CC1_EN
+1542   4                                      g_vucxReg2[0x30] = REG_DET_CTRL0;
+1543   4                                      REG_CC_DET_INT_MASK5 = 0xDF;//[5]RPCUR_DEB_CHG_INT_MASK
+1544   4                                      AOP_REG_ANATOP_7_0 &= 0xDF;//unflip
+1545   4      //                              CC_DET_IRQ_STATUS1 = 0x12;
+1546   4                                      CC_DET_IRQ_STATUS1 = 0x92;
+1547   4                                      REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_M
+             -ASK
+1548   4                              }
+1549   3                              else if ( ( ucxCCState == CC1_OPEN_CC2_RP )/* || ( ucxCCState == CC1_RA_CC2_RP )*/ )
+1550   3                              {
+1551   4      //                              REG_GPIOP_OUT &= (~GPIO7);
+1552   4                                      ALERT_MASK_LOW |= 0x01;
+1553   4                                      g_vucxReg5[0x95] |= 0x08;
+1554   4                                      g_vucxReg5[0x96] = 0x08;
+1555   4      
+1556   4                                      DISABLE_DISCHARGE_VBUS;
+1557   4                                      REG_DET_CTRL0 &= 0xEF;//SW_CC1_DISABLE
+1558   4                                      REG_DET_CTRL0 |= 0x20;//SW_CC2_EN
+1559   4                                      g_vucxReg2[0x30] = REG_DET_CTRL0;
+1560   4                                      REG_CC_DET_INT_MASK5 = 0xDF;//[5]RPCUR_DEB_CHG_INT_MASK
+1561   4                                      AOP_REG_ANATOP_7_0 |= 0x20;//flip
+1562   4      //                              CC_DET_IRQ_STATUS1 = 0x09;
+1563   4                                      CC_DET_IRQ_STATUS1 = 0x49;
+1564   4                                      REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_M
+             -ASK
+1565   4                              }
+1566   3                              else if ( ucxCCState == CC1_OPEN_CC2_RA )
+1567   3                              {
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 27  
+
+1568   4                                      g_vucxReg5[0x95] |= 0x10;
+1569   4                                      g_vucxReg5[0x96] = 0x10;
+1570   4      //                              g_vucxReg5[0x84]++;
+1571   4      
+1572   4                                      if ( ( ROLE_CONTROL & 0x40 ) == 0x40 )//DRP
+1573   4                                      {
+1574   5                                              ALERT_MASK_LOW &= 0xFE;
+1575   5      //                                      OTHER_CTRL3 |= 0x20;//[5]CC_CONN_ENWIN_MASK
+1576   5                                              REG_CC_DET_INT_MASK1 = 0xFF;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_
+             -MASK
+1577   5                                              REG_CC_DET_INT_MASK5 &= 0x7F;//[7]RADISCONN_CC2_INT_MASK
+1578   5                                              AOI_REG_PDC_95_88 |= 0x80;//continue to toggle when detecting Ra on CC2
+1579   5      /*
+1580   5      #ifdef TCPM_DEBOUNCE
+1581   5                                              REG_CC_DET_INT_MASK0 = 0xC7;//CC1_CONN_FILT_INT_MASK,CC2_CONN_FILT_INT_MASK,VBUS_CONN_FILT_INT_MASK
+1582   5                                              REG_CC_DET_INT_MASK1 = 0xC7;//CC1_DISCONN_FILT_INT_MASK,CC2_DISCONN_FILT_INT_MASK,VBUS_DISCONN_FILT_I
+             -NT_MASK
+1583   5      #else
+1584   5                                              REG_CC_DET_INT_MASK0 = 0xF8;//CC1_CONN_DEB_INT_MASK,CC2_CONN_DEB_INT_MASK,VBUS_CONN_DEB_INT_MASK
+1585   5                                              REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_
+             -MASK
+1586   5      #endif
+1587   5      */
+1588   5      //                                      g_ucxRaDisconnCnt = 0;
+1589   5                                      }
+1590   4                              }
+1591   3                              else if ( ucxCCState == CC1_RA_CC2_OPEN )
+1592   3                              {
+1593   4                                      g_vucxReg5[0x95] |= 0x20;
+1594   4                                      g_vucxReg5[0x96] = 0x20;
+1595   4      //                              g_vucxReg5[0x85]++;
+1596   4      
+1597   4                                      if ( ( ROLE_CONTROL & 0x40 ) == 0x40 )//DRP
+1598   4                                      {
+1599   5                                              ALERT_MASK_LOW &= 0xFE;
+1600   5      //                                      OTHER_CTRL3 |= 0x20;//[5]CC_CONN_ENWIN_MASK
+1601   5                                              REG_CC_DET_INT_MASK1 = 0xFF;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_
+             -MASK
+1602   5                                              REG_CC_DET_INT_MASK5 &= 0xBF;//[6]RADISCONN_CC1_INT_MASK
+1603   5                                              AOI_REG_PDC_95_88 |= 0x40;//continue to toggle when detecting Ra on CC1
+1604   5      /*
+1605   5      #ifdef TCPM_DEBOUNCE
+1606   5                                              REG_CC_DET_INT_MASK0 = 0xC7;//CC1_CONN_FILT_INT_MASK,CC2_CONN_FILT_INT_MASK,VBUS_CONN_FILT_INT_MASK
+1607   5                                              REG_CC_DET_INT_MASK1 = 0xC7;//CC1_DISCONN_FILT_INT_MASK,CC2_DISCONN_FILT_INT_MASK,VBUS_DISCONN_FILT_I
+             -NT_MASK
+1608   5      #else
+1609   5                                              REG_CC_DET_INT_MASK0 = 0xF8;//CC1_CONN_DEB_INT_MASK,CC2_CONN_DEB_INT_MASK,VBUS_CONN_DEB_INT_MASK
+1610   5                                              REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_
+             -MASK
+1611   5      #endif
+1612   5      */
+1613   5      //                                      g_ucxRaDisconnCnt = 0;
+1614   5                                      }
+1615   4                              }
+1616   3      #ifdef ENABLE_AUTO_POWER_DOWN
+1617   3                              AOI_REG_ANATOP_15_8 &= 0x7F;//disable FIRMCMD_AUTOPD_EN
+1618   3      #endif
+1619   3      
+1620   3      /*
+1621   3      #ifdef TCPM_DEBOUNCE
+1622   3                              CC_DET_IRQ_STATUS0 = 0x18;
+1623   3      #else
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 28  
+
+1624   3                              CC_DET_IRQ_STATUS0 = 0x03;
+1625   3      #endif
+1626   3      */
+1627   3      //                      CC_DET_IRQ_STATUS0 = 0x1B;
+1628   3                              CC_DET_IRQ_STATUS0 = 0xDB;
+1629   3                      }
+1630   2      
+1631   2      #ifdef TCPM_DEBOUNCE
+1632   2      //              if( CC_DET_IRQ_STATUS0 & 0x20 (~REG_CC_DET_INT_MASK0) ) // VBUS_CONN_FILT_STATUS
+1633   2                      if( CC_DET_IRQ_INT0 & 0x20 )    // VBUS_CONN_FILT_STATUS
+1634   2      #else
+              //              if( ( CC_DET_IRQ_STATUS0 & 0x04 ) && ( ( REG_CC_DET_INT_MASK & 0x01 ) != 0x01 ) )       // VBUS_CONN_DEB_STA
+             -TUS
+              //              if( CC_DET_IRQ_STATUS0 & 0x04 (~REG_CC_DET_INT_MASK0) ) // VBUS_CONN_DEB_STATUS
+                              if( CC_DET_IRQ_INT0 & 0x04 )    // VBUS_CONN_DEB_STATUS
+              #endif
+1639   2                      {
+1640   3                              if ( ( POWER_CONTROL & 0x40 ) == 0 )
+1641   3                              {
+1642   4                                      if ( REG_DET_CTRL2 & 0x40 )//ADC is sampling VBUS
+1643   4                                      {
+1644   5                                              REG_DET_CTRL2 &= 0x9B;//stop
+1645   5                                              REG_DLPF_CTRL0 |= 0x80;//Software reset for low pass filter
+1646   5                                              REG_DLPF_CTRL0 &= 0x7F;
+1647   5                                              g_ucxExitSample = 1;
+1648   5                                      }
+1649   4                                      REG_DET_CTRL2 &= 0x9B;//stop
+1650   4                                      CC_DET_IRQ_STATUS2 = 0x04;
+1651   4                                      REG_DET_CTRL2 |= 0x20;//SW_ADC_VBUS_EN
+1652   4                                      REG_DET_CTRL2 |= 0x40;//SW_DLPF_START
+1653   4                                      while ( (!(CC_DET_IRQ_STATUS2 & 0x04)) /*&& ( REG_DET_CTRL2 & 0x40 )*/ )
+1654   4                                      {
+1655   5                                              g_vucxReg5[0x86]++;
+1656   5                                      }
+1657   4                                      CC_DET_IRQ_STATUS2 = 0x04;
+1658   4                                      REG_DET_CTRL2 &= 0x9B;//stop
+1659   4                                      REG_DET_CTRL2 |= 0x04;//[2]SW_ADC_DET_DONE_VBUS
+1660   4                                      REG_DET_CTRL2 &= 0xFB;
+1661   4      
+1662   4                                      ET1 = 1;
+1663   4                                      TR1     = 1;
+1664   4                              }
+1665   3                              g_vucxReg5[0xA3]++;
+1666   3      /*
+1667   3      #ifdef TCPM_DEBOUNCE
+1668   3                              CC_DET_IRQ_STATUS0 = 0x20;
+1669   3      #else
+1670   3                              CC_DET_IRQ_STATUS0 = 0x04;
+1671   3      #endif
+1672   3      */
+1673   3                              CC_DET_IRQ_STATUS0 = 0x24;
+1674   3                      }
+1675   2      /*
+1676   2      #ifdef TCPM_DEBOUNCE
+1677   2      //              if( CC_DET_IRQ_STATUS1 & 0x08 & (~REG_CC_DET_INT_MASK1) )       // CC1_DISCONN_FILT_STATUS
+1678   2                      if( CC_DET_IRQ_INT1 & 0x08 )    // CC1_DISCONN_FILT_STATUS
+1679   2      #else
+1680   2      //              if( CC_DET_IRQ_STATUS1 & 0x01 & (~REG_CC_DET_INT_MASK1) )       // CC1_DISCONN_DEB_STATUS
+1681   2                      if( CC_DET_IRQ_INT1 & 0x01 )    // CC1_DISCONN_DEB_STATUS
+1682   2      #endif
+1683   2      */
+1684   2                      if( CC_DET_IRQ_INT1 & 0x01 )    // CC1_DISCONN_DEB_STATUS
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 29  
+
+1685   2                      {
+1686   3      //                              REG_GPIOP_OUT &= (~GPIO6);
+1687   3                              if ( ucxCCState == CC1_RA_CC2_OPEN )
+1688   3                              {
+1689   4      //                              CC_DET_IRQ_STATUS1 = 0x09;
+1690   4                                      CC_DET_IRQ_STATUS1 = 0x49;
+1691   4                                      return;
+1692   4                              }
+1693   3      /*                      if ( ( PDC_STAT_23_16 & 0x60 ) != 0 )//cc connection
+1694   3                              {
+1695   3                                      g_vucxReg5[0x61]++;
+1696   3                                      CC_DET_IRQ_STATUS1 = 0x49;
+1697   3                                      return;
+1698   3                              }*/
+1699   3      
+1700   3                              if( ( CC_DET_IRQ_STATUS4 & 0x40 ) && ( POWER_CONTROL & 0x01 ) && ( REG_DET_CTRL0 & 0x20 ) )     // PC_VCON
+             -N_EN_CHG_STATUS
+1701   3                              {
+1702   4                                      g_vucxReg5[0xB4]++;
+1703   4                      
+1704   4      //                              CC_DET_IRQ_STATUS1 = 0x09;
+1705   4                                      CC_DET_IRQ_STATUS1 = 0x49;
+1706   4                                      CC_DET_IRQ_STATUS4 = 0x40;
+1707   4      
+1708   4                                      return;
+1709   4                              }
+1710   3      //REG_GPIOP_OUT &= (~GPIO7);
+1711   3                              g_vucxReg5[0xA4]++;
+1712   3                              {
+1713   4                                      REG_CC_DET_INT_MASK5 |= 0x20;//[5]RPCUR_DEB_CHG_INT_MASK
+1714   4                                      REG_CC_DET_INT_MASK5 |= 0x40;//[6]RADISCONN_CC1_INT_MASK
+1715   4                                      ucxCCState = 0;
+1716   4      //                              REG_CC_DET_INT_MASK = 0xFF;
+1717   4      //                              REG_DET_CTRL0 &= 0xEF;//SW_CC1_DISABLE
+1718   4      //                              ENABLE_DISCHARGE_VBUS;
+1719   4              //                      REG_CC_DET_INT_MASK = 0xFE;
+1720   4                                      AOI_REG_PDC_95_88 &= 0x3F;
+1721   4                                      g_vucxReg5[0x90] = 0;
+1722   4                                      g_vucxReg5[0x91] = 0;
+1723   4                                      g_vucxReg5[0x92] = 0;
+1724   4                                      g_vucxReg5[0x93] = 0;
+1725   4                                      g_vucxReg5[0x94] = 0;
+1726   4                                      g_vucxReg5[0x95] = 0;
+1727   4                                      g_vucxReg5[0x96] = 0;
+1728   4                                      g_vucxReg5[0x8F] = 0;
+1729   4      
+1730   4                                      ALERT_MASK_LOW |= 0x01;
+1731   4                                      REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+1732   4                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1733   4                                      REG_DET_CTRL1 |= 0x10;
+1734   4                                      REG_DET_CTRL1 &= 0xEF;
+1735   4      /*
+1736   4      #ifdef ENABLE_AUTO_POWER_DOWN
+1737   4                                      AOI_REG_ANATOP_15_8 |= 0x80;//FIRMCMD_AUTOPD_EN
+1738   4                                      usxDelay = 30;
+1739   4                                      while ( usxDelay-- );
+1740   4                                      AOP_REG_ANATOP_7_0 |= 0x10; //sleep,auto clear when wakeup
+1741   4      #endif
+1742   4      */
+1743   4                              }
+1744   3      /*
+1745   3      #ifdef TCPM_DEBOUNCE
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 30  
+
+1746   3                              CC_DET_IRQ_STATUS1 = 0x08;
+1747   3      #else
+1748   3                              CC_DET_IRQ_STATUS1 = 0x01;
+1749   3      #endif
+1750   3      */
+1751   3      //                      CC_DET_IRQ_STATUS1 = 0x09;
+1752   3                              CC_DET_IRQ_STATUS1 = 0x49;
+1753   3                      }
+1754   2      /*
+1755   2      #ifdef TCPM_DEBOUNCE
+1756   2      //              if( CC_DET_IRQ_STATUS1 & 0x10 & (~REG_CC_DET_INT_MASK1) )       // CC2_DISCONN_FILT_STATUS
+1757   2                      if( CC_DET_IRQ_INT1 & 0x10 )    // CC2_DISCONN_FILT_STATUS
+1758   2      #else
+1759   2      //              if( CC_DET_IRQ_STATUS1 & 0x02 & (~REG_CC_DET_INT_MASK1) )       // CC2_DISCONN_DEB_STATUS
+1760   2                      if( CC_DET_IRQ_INT1 & 0x02 )    // CC2_DISCONN_DEB_STATUS
+1761   2      #endif
+1762   2      */
+1763   2                      if( CC_DET_IRQ_INT1 & 0x02 )    // CC2_DISCONN_DEB_STATUS
+1764   2                      {
+1765   3      //                              REG_GPIOP_OUT &= (~GPIO6);
+1766   3                              if ( ucxCCState == CC1_OPEN_CC2_RA )
+1767   3                              {
+1768   4      //                              CC_DET_IRQ_STATUS1 = 0x12;
+1769   4                                      CC_DET_IRQ_STATUS1 = 0x92;
+1770   4                                      return;
+1771   4                              }
+1772   3      /*                      if ( ( PDC_STAT_23_16 & 0x60 ) != 0 )//cc connection
+1773   3                              {
+1774   3                                      g_vucxReg5[0x62]++;
+1775   3                                      CC_DET_IRQ_STATUS1 = 0x92;
+1776   3                                      return;
+1777   3                              }*/
+1778   3      
+1779   3                              if( ( CC_DET_IRQ_STATUS4 & 0x40 ) && ( POWER_CONTROL & 0x01 ) && ( REG_DET_CTRL0 & 0x10 ) )     // PC_VCON
+             -N_EN_CHG_STATUS
+1780   3                              {
+1781   4                                      g_vucxReg5[0xB5]++;
+1782   4                      
+1783   4      //                              CC_DET_IRQ_STATUS1 = 0x12;
+1784   4                                      CC_DET_IRQ_STATUS1 = 0x92;
+1785   4                                      CC_DET_IRQ_STATUS4 = 0x40;
+1786   4      
+1787   4                                      return;
+1788   4                              }
+1789   3      //REG_GPIOP_OUT &= (~GPIO7);
+1790   3                              g_vucxReg5[0xA5]++;
+1791   3                              {
+1792   4                                      REG_CC_DET_INT_MASK5 |= 0x20;//[5]RPCUR_DEB_CHG_INT_MASK
+1793   4                                      REG_CC_DET_INT_MASK5 |= 0x80;//[7]RADISCONN_CC2_INT_MASK
+1794   4                                      ucxCCState = 0;
+1795   4      //                              REG_CC_DET_INT_MASK = 0xFF;
+1796   4      //                              REG_DET_CTRL0 &= 0xDF;//SW_CC2_DISABLE
+1797   4      //                              ENABLE_DISCHARGE_VBUS;
+1798   4              //                      REG_CC_DET_INT_MASK = 0xFE;
+1799   4                                      AOI_REG_PDC_95_88 &= 0x3F;
+1800   4                                      g_vucxReg5[0x90] = 0;
+1801   4                                      g_vucxReg5[0x91] = 0;
+1802   4                                      g_vucxReg5[0x92] = 0;
+1803   4                                      g_vucxReg5[0x93] = 0;
+1804   4                                      g_vucxReg5[0x94] = 0;
+1805   4                                      g_vucxReg5[0x95] = 0;
+1806   4                                      g_vucxReg5[0x96] = 0;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 31  
+
+1807   4                                      g_vucxReg5[0x8F] = 0;
+1808   4      
+1809   4                                      ALERT_MASK_LOW |= 0x01;
+1810   4                                      REG_DET_CTRL4 = REG_DET_CTRL4 & 0xF0; 
+1811   4                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1812   4                                      REG_DET_CTRL1 |= 0x10;
+1813   4                                      REG_DET_CTRL1 &= 0xEF;
+1814   4      /*
+1815   4      #ifdef ENABLE_AUTO_POWER_DOWN
+1816   4                                      AOI_REG_ANATOP_15_8 |= 0x80;//FIRMCMD_AUTOPD_EN
+1817   4                                      usxDelay = 30;
+1818   4                                      while ( usxDelay-- );
+1819   4                                      AOP_REG_ANATOP_7_0 |= 0x10; //sleep,auto clear when wakeup
+1820   4      #endif
+1821   4      */
+1822   4                              }
+1823   3      /*
+1824   3      #ifdef TCPM_DEBOUNCE
+1825   3                              CC_DET_IRQ_STATUS1 = 0x10;
+1826   3      #else
+1827   3                              CC_DET_IRQ_STATUS1 = 0x02;
+1828   3      #endif
+1829   3      */
+1830   3      //                      CC_DET_IRQ_STATUS1 = 0x12;
+1831   3                              CC_DET_IRQ_STATUS1 = 0x92;
+1832   3                      }
+1833   2      /*
+1834   2      #ifdef TCPM_DEBOUNCE
+1835   2      //              if( CC_DET_IRQ_STATUS1 & 0x20 & (~REG_CC_DET_INT_MASK1) )       // VBUS_DISCONN_FILT_STATUS
+1836   2                      if( CC_DET_IRQ_INT1 & 0x20 )    // VBUS_DISCONN_FILT_STATUS
+1837   2      #else
+1838   2      //              if( CC_DET_IRQ_STATUS1 & 0x04 & (~REG_CC_DET_INT_MASK1) )       // VBUS_DISCONN_DEB_STATUS
+1839   2                      if( CC_DET_IRQ_INT1 & 0x04 )    // VBUS_DISCONN_DEB_STATUS
+1840   2      #endif
+1841   2      */
+1842   2                      if( CC_DET_IRQ_INT1 & 0x04 )    // VBUS_DISCONN_DEB_STATUS
+1843   2                      {
+1844   3                              ET1 = 0;
+1845   3                              TR1     = 0;
+1846   3      
+1847   3                              g_vucxReg5[0xA6]++;
+1848   3      
+1849   3                              CC_DET_IRQ_STATUS1 = 0x24;
+1850   3                      }
+1851   2      
+1852   2      /*              if( CC_DET_IRQ_STATUS4 & 0x40 ) // ENABLE_VCONN_CHG_STATUS
+1853   2                      {
+1854   2                              CC_DET_IRQ_STATUS4 = 0x40;
+1855   2                      }*/
+1856   2                      if( CC_DET_IRQ_INT4 & 0x01 )    // PC_FCDICHAR_CHG_STATUS
+1857   2                      {
+1858   3                              g_vucxReg5[0xA7]++;
+1859   3      
+1860   3                              if ( POWER_CONTROL & 0x04 )
+1861   3                              {
+1862   4                                      ENABLE_DISCHARGE_VBUS;
+1863   4                                      g_ucxVBUS_Force_Discharge = 1;
+1864   4                              }
+1865   3                              else
+1866   3                              {
+1867   4                                      g_ucxVBUS_Force_Discharge = 0;
+1868   4                              }
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 32  
+
+1869   3      
+1870   3                              CC_DET_IRQ_STATUS4 = 0x01;
+1871   3                      }
+1872   2      
+1873   2      //              if( CC_DET_IRQ_STATUS5 & 0x20 & (~REG_CC_DET_INT_MASK5) )       // RPCUR_DEB_CHG_INT_MASK
+1874   2                      if( CC_DET_IRQ_INT5 & 0x20 )    // RPCUR_DEB_CHG_INT_MASK
+1875   2                      {
+1876   3                              g_vucxReg5[0xA8]++;
+1877   3      
+1878   3                              if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x01 ) )//Rp value of port pa
+             -rtner is 3A
+1879   3                              {
+1880   4      //                              if ( g_ucxRpVal != RP_3_0_A )
+1881   4                                      if ( ( REG_DET_CTRL0 & 0x10 ) == 0x10 )//SW_CC1_EN
+1882   4                                      {
+1883   5                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x03; 
+1884   5                                      }
+1885   4                                      else if ( ( REG_DET_CTRL0 & 0x20 ) == 0x20 )//SW_CC2_EN
+1886   4                                      {
+1887   5                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x0C; 
+1888   5                                      }
+1889   4                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1890   4                                      REG_DET_CTRL1 |= 0x10;
+1891   4                                      REG_DET_CTRL1 &= 0xEF;
+1892   4                              }
+1893   3                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x01 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//Rp value of po
+             -rt partner is 1.5A
+1894   3                              {
+1895   4      //                              if ( g_ucxRpVal != RP_1_5_A )
+1896   4                                      if ( ( REG_DET_CTRL0 & 0x10 ) == 0x10 )//SW_CC1_EN
+1897   4                                      {
+1898   5                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x02; 
+1899   5                                      }
+1900   4                                      else if ( ( REG_DET_CTRL0 & 0x20 ) == 0x20 )//SW_CC2_EN
+1901   4                                      {
+1902   5                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x08; 
+1903   5                                      }
+1904   4                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1905   4                                      REG_DET_CTRL1 |= 0x10;
+1906   4                                      REG_DET_CTRL1 &= 0xEF;
+1907   4                              }
+1908   3                              else if ( ( ( PDC_STAT_7_0 & 0x01 ) == 0x00 ) && ( ( PDC_STAT_15_8 & 0x01 ) == 0x00 ) )//Rp value of po
+             -rt partner is 0.9A
+1909   3                              {
+1910   4      //                              if ( g_ucxRpVal != RP_0_9_A )
+1911   4                                      if ( ( REG_DET_CTRL0 & 0x10 ) == 0x10 )//SW_CC1_EN
+1912   4                                      {
+1913   5                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x01; 
+1914   5                                      }
+1915   4                                      else if ( ( REG_DET_CTRL0 & 0x20 ) == 0x20 )//SW_CC2_EN
+1916   4                                      {
+1917   5                                              REG_DET_CTRL4 = ( REG_DET_CTRL4 & 0xF0 ) | 0x04; 
+1918   5                                      }
+1919   4                                      REG_SET_CLR |= 0x02;//CC_STATUS.Looking4Connection = 0
+1920   4                                      REG_DET_CTRL1 |= 0x10;
+1921   4                                      REG_DET_CTRL1 &= 0xEF;
+1922   4                              }
+1923   3      
+1924   3                              CC_DET_IRQ_STATUS5 = 0x20;
+1925   3                      }
+1926   2      
+1927   2      //              if( CC_DET_IRQ_STATUS5 & 0x40 & (~REG_CC_DET_INT_MASK5) )       // RADISCONN_CC1_STATUS
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 33  
+
+1928   2                      if( CC_DET_IRQ_INT5 & 0x40 )    // RADISCONN_CC1_STATUS
+1929   2                      {
+1930   3                              g_vucxReg5[0xA9]++;
+1931   3      
+1932   3                              REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_MA
+             -SK
+1933   3                              REG_CC_DET_INT_MASK5 |= 0x40;//[6]RADISCONN_CC1_INT_MASK
+1934   3                              AOI_REG_PDC_95_88 &= 0x3F;
+1935   3                              ucxCCState = 0;
+1936   3      /*                              
+1937   3      #ifdef TCPM_DEBOUNCE
+1938   3                              CC_DET_IRQ_STATUS0 = 0x38;
+1939   3                              CC_DET_IRQ_STATUS1 = 0x38;
+1940   3                              REG_CC_DET_INT_MASK0 = 0xC7;//CC1_CONN_FILT_INT_MASK,CC2_CONN_FILT_INT_MASK,VBUS_CONN_FILT_INT_MASK
+1941   3                              REG_CC_DET_INT_MASK1 = 0xC7;//CC1_DISCONN_FILT_INT_MASK,CC2_DISCONN_FILT_INT_MASK,VBUS_DISCONN_FILT_INT
+             -_MASK
+1942   3      #else
+1943   3                              CC_DET_IRQ_STATUS0 = 0x07;
+1944   3                              CC_DET_IRQ_STATUS1 = 0x07;
+1945   3                              REG_CC_DET_INT_MASK0 = 0xF8;//CC1_CONN_DEB_INT_MASK,CC2_CONN_DEB_INT_MASK,VBUS_CONN_DEB_INT_MASK
+1946   3                              REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_MA
+             -SK
+1947   3      #endif
+1948   3      */
+1949   3      #ifdef ENABLE_AUTO_POWER_DOWN
+1950   3                              AOI_REG_ANATOP_15_8 |= 0x80;//FIRMCMD_AUTOPD_EN
+1951   3                              usxDelay = 30;
+1952   3                              while ( usxDelay-- );
+1953   3                              AOP_REG_ANATOP_7_0 |= 0x10; //sleep,auto clear when wakeup
+1954   3      #endif
+1955   3      
+1956   3                              CC_DET_IRQ_STATUS5 = 0x40;
+1957   3                      }
+1958   2      
+1959   2      //              if( CC_DET_IRQ_STATUS5 & 0x80 & (~REG_CC_DET_INT_MASK5) )       // RADISCONN_CC2_STATUS
+1960   2                      if( CC_DET_IRQ_INT5 & 0x80 )    // RADISCONN_CC2_STATUS
+1961   2                      {
+1962   3                              g_vucxReg5[0xAA]++;
+1963   3      
+1964   3                              REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_MA
+             -SK
+1965   3                              REG_CC_DET_INT_MASK5 |= 0x80;//[7]RADISCONN_CC2_INT_MASK
+1966   3                              AOI_REG_PDC_95_88 &= 0x3F;
+1967   3                              ucxCCState = 0;
+1968   3      /*                              
+1969   3      #ifdef TCPM_DEBOUNCE
+1970   3                              CC_DET_IRQ_STATUS0 = 0x38;
+1971   3                              CC_DET_IRQ_STATUS1 = 0x38;
+1972   3                              REG_CC_DET_INT_MASK0 = 0xC7;//CC1_CONN_FILT_INT_MASK,CC2_CONN_FILT_INT_MASK,VBUS_CONN_FILT_INT_MASK
+1973   3                              REG_CC_DET_INT_MASK1 = 0xC7;//CC1_DISCONN_FILT_INT_MASK,CC2_DISCONN_FILT_INT_MASK,VBUS_DISCONN_FILT_INT
+             -_MASK
+1974   3      #else
+1975   3                              CC_DET_IRQ_STATUS0 = 0x07;
+1976   3                              CC_DET_IRQ_STATUS1 = 0x07;
+1977   3                              REG_CC_DET_INT_MASK0 = 0xF8;//CC1_CONN_DEB_INT_MASK,CC2_CONN_DEB_INT_MASK,VBUS_CONN_DEB_INT_MASK
+1978   3                              REG_CC_DET_INT_MASK1 = 0xF8;//CC1_DISCONN_DEB_INT_MASK,CC2_DISCONN_DEB_INT_MASK,VBUS_DISCONN_DEB_INT_MA
+             -SK
+1979   3      #endif
+1980   3      */
+1981   3      #ifdef ENABLE_AUTO_POWER_DOWN
+1982   3                              AOI_REG_ANATOP_15_8 |= 0x80;//FIRMCMD_AUTOPD_EN
+1983   3                              usxDelay = 30;
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 34  
+
+1984   3                              while ( usxDelay-- );
+1985   3                              AOP_REG_ANATOP_7_0 |= 0x10; //sleep,auto clear when wakeup
+1986   3      #endif
+1987   3      
+1988   3                              CC_DET_IRQ_STATUS5 = 0x80;
+1989   3                      }
+1990   2              }
+1991   1      
+1992   1      //      if( CC_DET_IRQ_STATUS2 & 0x08 & (~REG_CC_DET_INT_MASK2) )       //CMD_WRITE_STATUS 
+1993   1              if( CC_DET_IRQ_INT2 & 0x08 )    //CMD_WRITE_STATUS 
+1994   1              {
+1995   2                      switch ( COMMAND )
+1996   2                      {
+1997   3                      case 0x99://Look4Connection.
+1998   3                              ALERT_MASK_LOW &= 0xFE;
+1999   3      //                      ROLE_CONTROL = ( ROLE_CONTROL & 0x30 ) | 0x4A;
+2000   3                              ALERT_STATUS_1 |= 0x01;
+2001   3      //                      ALERT_STATUS_1 = ALERT_STATUS_1 & (0x01);
+2002   3      //                      REG_IRQ_SRC_CTL &= 0xFE;
+2003   3                              break;
+2004   3                      case 0xFF://I2C Idle.
+2005   3                              if ( ( PDC_STAT_23_16 & 0x60 ) == 0 )//no cc connection
+2006   3                              {
+2007   4      #ifdef ENABLE_AUTO_POWER_DOWN
+2008   4                                      AOI_REG_ANATOP_15_8 |= 0x80;//FIRMCMD_AUTOPD_EN
+2009   4                                      usxDelay = 30;
+2010   4                                      while ( usxDelay-- );
+2011   4                                      AOP_REG_ANATOP_7_0 |= 0x10; //sleep,auto clear when wakeup 
+2012   4      //REG_GPIOP_OUT |= (GPIO7);
+2013   4      #endif
+2014   4                              }
+2015   3                              break;
+2016   3                      case 0x11://WakeI2C
+2017   3                              break;
+2018   3                      case 0x22://DisableVbusDetect.
+2019   3                              break;
+2020   3                      case 0x33://EnableVbusDetect.
+2021   3                              break;
+2022   3                      case 0x44://DisableSinkVbus.
+2023   3                              break;
+2024   3                      case 0x55://SinkVbus.
+2025   3                              DISABLE_DISCHARGE_VBUS;
+2026   3                              break;
+2027   3                      case 0x66://DisableSourceVbus.
+2028   3                              break;
+2029   3                      case 0x77://SourceVbusDefaultVoltage.
+2030   3                              DISABLE_DISCHARGE_VBUS;
+2031   3                              break;
+2032   3                      case 0x88://SourceVbusHighVoltage.
+2033   3                              break;
+2034   3                      case 0xAA://RxOneMore.
+2035   3                              break;
+2036   3                      default:
+2037   3                              break;
+2038   3                      }
+2039   2                      COMMAND = 0;
+2040   2      
+2041   2                      CC_DET_IRQ_STATUS2 = 0x08;                                                 
+2042   2              }
+2043   1      
+2044   1      //      if( CC_DET_IRQ_STATUS2 & 0x10 & (~REG_CC_DET_INT_MASK2) )       //BELOW_DISCON_THRESH_INT 
+2045   1              if( CC_DET_IRQ_INT2 & 0x10 )    //BELOW_DISCON_THRESH_INT 
+C51 COMPILER V8.02   EXT1INT2                                                              04/27/2018 15:47:25 PAGE 35  
+
+2046   1              {
+2047   2                      g_vucxReg5[0xAB]++;
+2048   2      
+2049   2                      DISABLE_DISCHARGE_VBUS;
+2050   2                      POWER_CONTROL &= 0xFB;//Disable forced discharge
+2051   2      
+2052   2                      CC_DET_IRQ_STATUS2 = 0x10;                                                 
+2053   2              }
+2054   1      //      if( CC_DET_IRQ_STATUS2 & 0x20 & (~REG_CC_DET_INT_MASK2) )       //BELOW_VSAFE0V_INT_MASK 
+2055   1              if( CC_DET_IRQ_INT2 & 0x20 )    //BELOW_VSAFE0V_INT_MASK 
+2056   1              {
+2057   2                      g_vucxReg5[0xAC]++;
+2058   2      
+2059   2                      DISABLE_DISCHARGE_VBUS;
+2060   2                      POWER_CONTROL &= 0xFB;
+2061   2      
+2062   2                      CC_DET_IRQ_STATUS2 = 0x20;                                                 
+2063   2              }
+2064   1      //      if( CC_DET_IRQ_STATUS2 & 0x40 & (~REG_CC_DET_INT_MASK2) )       //BELOW_STOP_THRESH_INT_MASK 
+2065   1              if( CC_DET_IRQ_INT2 & 0x40 )    //BELOW_STOP_THRESH_INT_MASK 
+2066   1              {
+2067   2                      g_vucxReg5[0xAD]++;
+2068   2      
+2069   2                      CC_DET_IRQ_STATUS2 = 0x40;                                                 
+2070   2              }
+2071   1      
+2072   1      #if 0
+                      if ( ( ECNTCON & 0x10 ) == 0x10 )  // 40bit counter 1
+                      {
+                              ECNTCON  = 0x10;                // clear INT, disable counter1
+                      }
+              #endif  
+2078   1      
+2079   1      #if 0
+                      if ( ( ECNTCON2 & 0x10 ) == 0x10 )  // 40bit counter 2
+                      {                               
+                              ECNTCON2  = 0x10;               // clear INT, disable counter2
+                      }
+              #endif
+2085   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   4495    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,88 @@
+C51 COMPILER V8.02   MPU_INIT                                                              04/27/2018 15:47:21 PAGE 1   
+
+
+C51 COMPILER V8.02, COMPILATION OF MODULE MPU_INIT
+OBJECT MODULE PLACED IN .\OEM\Obj\MPU_init.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE MPU\DP8051XP\sources\MPU_init.c OMF2 BROWSE VARBANKING DEBUG PRINT(.\OEM\ls
+                    -t\MPU_init.lst) OBJECT(.\OEM\Obj\MPU_init.obj)
+
+line level    source
+
+   1          #include <myDP8051XP.H>
+   2          #include "registers_map.h"
+   3          
+   4          /*****************************************************************************/
+   5          /* Function Name:               MPU_Init
+   6          /* Description:                 Initialize timer0, timer1, UART
+   7          /* Input parameter:             None
+   8          /* Output parameter:    None
+   9          /* revision history:    
+  10          /*
+  11          /*
+  12          /*****************************************************************************/
+  13          
+  14          void MPU_Init(void)
+  15          {
+  16   1              SCON    =       0X50;              // 8 bit UART, baud rate can be set. enable receive
+  17   1      //      TMOD    =       TMOD | 0X20;   // Timer1 works at Mode2, load TL1 from TH1 automaticly
+  18   1      //      TMOD    =       TMOD | 0X10;   // Timer1 works at Mode1, 16bit counter
+  19   1      //      PCON    |=      0X80;              // SMOD0=1, baud rate is 1/16 of overflow frequency of Timer1 
+  20   1                                                                 // 152542.3/16=9533.90                        76923 / 16 = 4807
+  21   1          
+  22   1              //PCON    |=  0X10;       //Make XDATA writable
+  23   1          //60Mhz
+  24   1              TH0         =   0X9E;                           // 65536 - 0x9E58 = 25000, 60MHz/12=5MHz, that's 1/200s.
+  25   1          TL0         =   0X58;                               // so in ISR for Timer0, count to 200, add 1s.
+  26   1      
+  27   1          TH1         =   0X3C;        //10ms
+  28   1          TL1         =   0XB0;
+  29   1      
+  30   1              TMOD        =   TMOD | 0x11;            // Timer0,1 works at Mode 1, 16bit counter
+  31   1      
+  32   1      //      TR1             =       1;                // start Timer1
+  33   1      //  TR0     =   1;                // start Timer0
+  34   1      
+  35   1      
+  36   1      //      PX0         =   1;          //0: low priority     1: high priority
+  37   1      //      PX1         =   1;          //0: low priority     1: high priority
+  38   1          IT0         =   0;          //0: level trigger   1: edge trigger
+  39   1          IT1         =   0;          //0: level trigger   1: edge trigger
+  40   1      
+  41   1      #ifdef ENABLE_MPU_RESET_COUNTER
+                      OTHER_CTRL1 = 0x10;             //[7]STUCK_RST_IGNORE
+                                              //[6]FW_CNT_CLR(0->1 toggle)
+                                              //[5:4]TIMEOUT_SEL, 00:250ms, 01:500ms, 10:750ms, 11:1000ms
+              #else
+  46   1              OTHER_CTRL1 = 0x90;
+  47   1      #endif
+  48   1      
+  49   1      /*      // 2 seconds               
+  50   1              ECNT0  = 0x00;
+  51   1              ECNT1  = 0x0E;
+  52   1              ECNT2  = 0x27;
+  53   1              ECNT3  = 0x07;
+  54   1              ECNT4  = 0x00;
+C51 COMPILER V8.02   MPU_INIT                                                              04/27/2018 15:47:21 PAGE 2   
+
+  55   1      */
+  56   1      //      EIE |= 0x03;            // enable 40bit counter 1,2 interrupt
+  57   1      //      EIE |= 0x01;            // enable 40bit counter 1 interrupt
+  58   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     29    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

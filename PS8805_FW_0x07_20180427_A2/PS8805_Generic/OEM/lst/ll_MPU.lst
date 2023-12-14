@@ -1,0 +1,56 @@
+C51 COMPILER V8.02   LL_MPU                                                                04/27/2018 15:47:23 PAGE 1   
+
+
+C51 COMPILER V8.02, COMPILATION OF MODULE LL_MPU
+OBJECT MODULE PLACED IN .\OEM\Obj\ll_MPU.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE LL_Functions\sources\ll_MPU.c OMF2 BROWSE VARBANKING DEBUG PRINT(.\OEM\lst\
+                    -ll_MPU.lst) OBJECT(.\OEM\Obj\ll_MPU.obj)
+
+line level    source
+
+   1          /////////////////////////////////////////////////
+   2          //      LL function for MPU
+   3          /////////////////////////////////////////////////
+   4          #include <myDP8051XP.H>
+   5          #include "global.h"
+   6          //#include "cl_Functions.h"
+   7          #include "mpu_functions.h"
+   8          //#include "llfnEnum.h"
+   9          
+  10          void ll_MPU_DisableINT(void)
+  11          {
+  12   1              MPU_DisableINT();
+  13   1      }
+  14          
+  15          void ll_MPU_EnableINT(void)
+  16          {
+  17   1              MPU_EnableINT();
+  18   1      }
+  19          
+  20          void ll_MPU_SetINTMask(void)
+  21          {
+  22   1              MPU_SetINTMask0();
+  23   1              MPU_SetINTMask1();
+  24   1      
+  25   1              MPU_EnableINT0();
+  26   1              MPU_EnableINT1();
+  27   1      }
+  28          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     18    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
